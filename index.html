@@ -23,6 +23,7 @@
 			--modal-shadow: #06060888;
 			--modal-bg: #161618;
 
+			--bg1: #181819;
 			--bg2: #2a2a2b;
 			--bg3: #444445;
 			--bg4: #777779;
@@ -106,9 +107,61 @@
 			width: calc(var(--piece) * 8);
 			height: calc(var(--piece) * 8);
 			box-sizing: border-box;
-
-			overflow: hidden;
 		}
+
+		/**/
+
+		#mobile-moves {
+			z-index: 999;
+
+			position: absolute;
+			bottom: 100%;
+			right: 0;
+
+			display: grid;
+			align-items: center;
+			grid-template-rows: 100%;
+			grid-auto-columns: max-content; /* ! TODO */
+			box-sizing: border-box;
+
+			width: 100%;
+			height: calc(4 * var(--u));
+			padding: calc(.5 * var(--u));
+			padding-bottom: calc(.6 * var(--u));
+			gap: calc(.5 * var(--u));
+
+			background: var(--bg1);
+			overflow: hidden;
+
+			p {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+
+				width: calc(6 * var(--u));
+				height: 100%;
+				font-size: calc(2 * var(--u));
+
+				padding-top: calc(.1 * var(--u));
+				border-radius: calc(.75 * var(--u));
+
+				color: var(--text);
+				font-family: Arial;
+				text-align: center;
+
+				&:nth-child(3n+1) {
+					color: var(--text-s);
+				}
+				&:last-child {
+					background: var(--bg2)
+				}
+				&::selection {
+					background: var(--text-s);
+				}
+			}
+		}
+
+		/**/
 
 		.selected {
 			background: var(--selected);
@@ -174,7 +227,7 @@
 
 			z-index: 99;
 
-			transition: transform .1s;
+			transition: transform .2s;
 			transform: translate(
 				calc((var(--f) - 1) * var(--piece)),
 				calc(-1 * (var(--r) - 1) * var(--piece))
@@ -359,6 +412,7 @@
 	</svg>
 
 	<div id="board">
+		<div id="mobile-moves"><p>1.</p><p>e4</p><p>e5</p><p>2.</p><p>f4</p><p>f5</p><p>3.</p><p>g4</p><p>g5</p><p>4.</p><p>h4</p><p>h5</p><p>5.</p><p>d4</p><p>d5</p><p>6.</p><p>c3</p><p>c5</p><p>7.</p><p>b4</p><p>b5</p><p>8.</p><p>a4</p><p>a5</p><p>9.</p><p>c4</p></div>
 		<div id="promote">
 			<div class="promotion" id="white-promotion" style="--f: 1;" hidden>
 				<img class="promote-option" data-value="wq" src="/img/150/wq.png">
@@ -472,12 +526,12 @@
 		// rank => y
 
 		const boardEl = document.getElementById('board');
-		const state = {
+		let state = {
+			end: null,
 			turn: 'w',
 			halfmoves: 0,
 			fmr: 0,
 			selected: null,
-			check: false,
 			castling: {
 				w: {
 					k: true,
@@ -494,7 +548,7 @@
 				piece: [],
 				state: []
 			}
-		}
+		};
 		let gameBoard = [
 			['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
 			['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
@@ -525,7 +579,7 @@
 			document.querySelectorAll('.piece').forEach(s => s.classList = 'piece');
 		}
 
-		function loadBoard(board) {
+		function loadBoard(board=gameBoard) {
 			clearPieces();
 			clearSquares();
 			board.forEach((rank, r) => {
@@ -564,7 +618,12 @@
 			});
 
 			if (includeState) {
+				state.end = null;
 				state.turn = pieces[1];
+				state.halfmoves = Number(pieces[5])*2 - (state.turn === 'w' ? 2 : 1);
+				state.fmr = Number(pieces[4]);
+				state.selected = null;
+
 				state.castling.w.k = pieces[2].includes('K');
 				state.castling.w.q = pieces[2].includes('Q');
 				state.castling.b.k = pieces[2].includes('k');
@@ -573,8 +632,16 @@
 					color: state.turn,
 					...getNameSquare(pieces[3])
 				};
-				state.fmr = Number(pieces[4]);
-				state.halfmoves = Number(pieces[5])*2 - (state.turn === 'w' ? 2 : 1);
+				
+				state.history = {
+					square: [],
+					piece: [],
+					state: []
+				};
+
+				moveLists.forEach(ele => {
+					ele.innerHTML = '';
+				})
 			}
 		}
 		function getFEN(includeState=true, board=gameBoard) {
@@ -689,6 +756,48 @@
 		function getPiece(f, r) {
 			return document.querySelector(`.piece[style*="--f: ${f}"][style*="--r: ${r}"]`);
 		}
+		
+		let audioContext;
+		document.addEventListener('click', async () => {
+			audioContext = new AudioContext();
+			await audioContext.resume();
+			await loadAudios();
+		}, { once: true });
+
+		const audioArray = ['capture', 'castle', 'check', 'end', 'illegal', 'move', 'move2', 'promote', 'start'];
+		let audios = {};
+
+		async function loadAudios() {
+			for (const name of audioArray) {
+				console.log(name);
+				const resp = await fetch(`audio/${name}.webm`);
+				audios[name] = await audioContext.decodeAudioData(await resp.arrayBuffer());
+			}
+		}
+		
+
+		async function playSound(name) {
+			console.log(name);
+			if (!audios[name] || !audioContext) return;
+
+			const src = audioContext.createBufferSource();
+			src.buffer = audios[name];
+
+			src.connect(audioContext.destination);
+			src.start(0);
+		}
+
+
+		function playMoveSound(algebraic) {
+			let sound;
+			if (algebraic[5]) sound = 'check';
+			else if (algebraic[0] === 'O-O' || algebraic[0] === 'O-O-O') sound = 'castle';
+			else if (algebraic[4]) sound = 'promote';
+			else if (algebraic[2]) sound = 'capture';
+			else sound = state.turn === 'w' ? 'move' : 'move2';
+
+			if (sound) playSound(sound);
+		}
 
 		const winConditions = [
 			['w', 'Checkmate'],
@@ -711,17 +820,19 @@
 			reason: resultCondition.querySelector('h2')
 		}
 
-		let gameEnded = null;
 		function endGame(code) {
-			if (gameEnded !== null) return;
-			gameEnded = code;
+			if (state.end !== null) return;
+			state.end = code;
 		}
-		function checkGameEnded() {
-			if (gameEnded === null) return;
-			const [winner, reason] = winConditions[gameEnded];
+		async function checkGameEnded() {
+			if (state.end === null) return;
+			const [winner, reason] = winConditions[state.end];
 			results.winner.innerText = winner ? (winner === 'w' ? 'White' : 'Black') + ' Wins' : 'Draw';
 			results.reason.innerText = 'By ' + reason;
 			results.wrapper.hidden = false;
+
+			await wait(200);
+			playSound('end');
 		}
 		
 		const pieceValues = {
@@ -844,6 +955,7 @@
 			return false;
 		}
 
+		const moveLists = [document.getElementById('mobile-moves')];
 		function logMove(from, to, algebraic='') {
 			state.history.square.push([[from.f, from.r], [to.f, to.r]]);
 			state.history.piece.push(algebraic || '');
@@ -866,6 +978,19 @@
 
 			state.halfmoves++;
 			state.turn = state.turn === 'w' ? 'b' : 'w';
+
+			if (algebraic) {
+				moveLists.forEach(ele => {
+					if (state.turn === 'b') {
+						const moveNumEle = document.createElement('p');
+						moveNumEle.innerText = `${Math.floor(state.halfmoves / 2) + 1}.`;
+						ele.appendChild(moveNumEle);
+					}
+					const moveEle = document.createElement('p');
+					moveEle.innerText = algebraic;
+					ele.appendChild(moveEle);
+				});
+			}
 		}
 
 		function simpleMove(from, to) {
@@ -885,13 +1010,14 @@
 		async function showSimpleMove(piece, to) {
 			piece.style.setProperty('--f', to.f);
 			piece.style.setProperty('--r', to.r);
-			if (gameEnded !== null) await animate(piece, 1);
+			if (state.end !== null) await animate(piece, 1);
 		}
 		async function showSimpleRemove(piece) {
-			if (gameEnded !== null) await wait(600);
+			if (state.end !== null) await wait(600);
 			piece.remove();
 		}
  
+		// 0piece|castle 1disambiguate? 2capture? 3to_square 4promote? 5check(mate)?
 		async function makeMove(from, to, sim=false) {
 			const moves = [];
 			let queue = [];
@@ -994,12 +1120,12 @@
 				state.enpassant = { color: opponentColor, f: to.f, r: to.r + (color === 'w' ? -1 : 1) };
 			} else state.enpassant = null;
 
-			state.check = checkCheck(gameBoard, opponentColor);
-			if (state.check) algebraic[5] = '+';
+			const inCheck = checkCheck(gameBoard, opponentColor);
+			if (inCheck) algebraic[5] = '+';
 
 			const legal = await checkLegal(opponentColor);
 			if (!legal) {
-				if (state.check) {
+				if (inCheck) {
 					endGame(color === 'w' ? 0 : 1);
 					algebraic[5] = '#';
 				} else endGame(6);
@@ -1050,7 +1176,8 @@
 				else await showSimpleMove(e, to);
 			}
 
-			checkGameEnded();
+			playMoveSound(algebraic);
+			await checkGameEnded();
 
 			return [true, capture ? capture : null];
 		}
@@ -1201,6 +1328,8 @@
 			} else if (state.selected) {
 				if (await legalMove(state.selected, pos)) {
 					const resp = await makeMove(state.selected, pos);
+				} else {
+					playSound('illegal');
 				}
 				state.selected = null;
 			}
@@ -1267,7 +1396,10 @@
 		//
 
 		function newGame() {
+			loadFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+			loadBoard();
 			results.wrapper.hidden = true;
+			playSound('start')
 		}
 
 		//
@@ -1296,9 +1428,10 @@
 		// loadFEN('kqqqqqqq/qqqqqqqq/qqqqqqqq/qqqqqqqq/QQQQQQQQ/QQQQQQQQ/QQQQQQQQ/QQQQQQQK', false);
 
 		loadFEN('8/6Q1/8/4Q3/8/8/nn6/kn5K', false);
+		loadBoard();
 
 		// loadFEN('4k3/8/4K3/4P3/8/8/8/8 w - - 0 1');
-		loadBoard(gameBoard);
+		// newGame();
 
 		const debug = document.getElementById('debug');
 		const debug2 = document.getElementById('debug2');
