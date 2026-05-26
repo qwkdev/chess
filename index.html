@@ -891,16 +891,13 @@
 			if (gameEnded !== null) await wait(600);
 			piece.remove();
 		}
-
-		// piece disambiguate? capture? to_square promote? check(mate)?
-
-		// TODO: pawns, castling
-
+ 
 		async function makeMove(from, to, sim=false) {
 			const moves = [];
 			let queue = [];
 
 			let algebraic = ['', '', '', '', '', ''];
+			let algebraicDone = false;
 
 			const piece = getBoard(from.f, from.r);
 			let capture = getBoard(to.f, to.r);
@@ -931,6 +928,9 @@
 				if (!sim) queue.push([simpleMove(rookFrom, rookTo), rookTo]);
 				moves.push([rookFrom, rookTo]);
 				defaultMove = false;
+
+				algebraic[0] = to.f === 7 ? 'O-O' : 'O-O-O';
+				algebraicDone = true;
 			}
 
 			if (!sim && pType === 'p' && to.r === (color === 'w' ? 8 : 1)) {
@@ -941,7 +941,7 @@
 				defaultCapture = false;
 				capture = resp[3];
 
-				algebraic[4] = '='+resp[2].toUpperCase();
+				if (!algebraicDone) algebraic[4] = '='+resp[2].toUpperCase();
 
 				queue.push(...resp[0]);
 			}
@@ -1011,14 +1011,36 @@
 			if (state.fmr >= 100) endGame(8);
 			checkInsufficient();
 
-			if (pType !== 'p') algebraic[0] = piece.toUpperCase();
-			if (capture) algebraic[2] = 'x';
+			if (!algebraicDone) {
+				if (pType !== 'p') algebraic[0] = piece.toUpperCase();
+				if (capture) algebraic[2] = 'x';
 
-			algebraic[3] = getSquareName(to.f, to.r);
+				algebraic[3] = getSquareName(to.f, to.r);
 
-			if (pType === 'p' && capture) algebraic[1] = getSquareName(from.f, from.r)[0];
-			if (['n', 'b', 'r', 'q'].includes(pType)) {
-				// scan files for pieces then rows, check if to to is validMove
+				if (pType === 'p' && capture) algebraic[1] = getSquareName(from.f, from.r)[0];
+				if (['n', 'b', 'r', 'q'].includes(pType)) {
+					let deambiguate = { f: false, r: false };
+					for (const [df, dr] of moveDeltas[pType]) {
+						for (let i = 1; i < (pType === 'n' ? 2 : 8); i++) {
+							const [potentialF, potentialR] = [to.f + df * i, to.r + dr * i]
+							const potential = getBoard(potentialF, potentialR);
+							if (potential === null) break;
+							if (potential !== '') {
+								if (
+									color === getColor(potential) &&
+									potential.toLowerCase() === pType
+								) {
+									if (potentialF === from.f) deambiguate.r = true;
+									if (potentialR === from.r) deambiguate.f = true;
+								}
+								break;
+							}
+						}
+					}
+
+					const fromName = getSquareName(from.f, from.r);
+					algebraic[1] = (deambiguate.f ? fromName[0] : '') + (deambiguate.r ? fromName[1] : '');
+				}
 			}
 
 			logMove(from, to, algebraic.join(''));
@@ -1264,6 +1286,8 @@
 		// loadFEN('kn6/8/8/8/8/8/5Q2/6NK', false);
 
 		// loadFEN('kqqqqqqq/qqqqqqqq/qqqqqqqq/qqqqqqqq/QQQQQQQQ/QQQQQQQQ/QQQQQQQQ/QQQQQQQK', false);
+
+		loadFEN('8/6Q1/8/4n3/8/6Q1/nn6/kn5K', false);
 
 		// loadFEN('4k3/8/4K3/4P3/8/8/8/8 w - - 0 1');
 		loadBoard(gameBoard);
