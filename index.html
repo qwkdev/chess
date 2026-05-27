@@ -67,6 +67,7 @@
 		body {
 			background: var(--bg);
 			overflow: hidden;
+			margin: 0;
 		}
 
 		.btn {
@@ -98,6 +99,37 @@
 			outline: none;
 		}
 
+		.underlined {
+			color: #fff;
+			font-family: Arial;
+			font-weight: 500;
+			position: relative;
+			transition: .2s;
+			z-index: 2;
+			text-decoration: none;
+		}
+		.underline {
+			--widen: 0%;
+			--fix: 0%;
+			width: calc(100% + var(--widen));
+			transform: translateX(calc(-100% + var(--fix)));
+			height: 1px;
+			background: #fff;
+			position: absolute;
+			bottom: 0;
+			transition: .2s;
+			z-index: -1;
+		}
+		.underlined:hover {
+			color: #000;
+		}
+		.underlined:hover .underline {
+			height: 100%;
+		}
+		.underlined::selection {
+			background: #ffffff55;
+		}
+
 		#board {
 			position: absolute;
 			top: 50%;
@@ -118,13 +150,15 @@
 			bottom: 100%;
 			right: 0;
 
-			display: grid;
+			display: flex;
 			align-items: center;
-			grid-template-rows: 100%;
-			grid-auto-columns: max-content; /* ! TODO */
+			/* grid-template-rows: 100%; */
+			/* grid-auto-columns: max-content; */
+			
 			box-sizing: border-box;
 
-			width: 100%;
+			width: max-content;
+			min-width: 100%;
 			height: calc(4 * var(--u));
 			padding: calc(.5 * var(--u));
 			padding-bottom: calc(.6 * var(--u));
@@ -159,6 +193,61 @@
 					background: var(--text-s);
 				}
 			}
+		}
+
+		#menu {
+			position: absolute;
+			top: calc(1 * var(--u));
+			left: calc(1 * var(--u));
+
+			display: flex;
+			gap: calc(1 * var(--u));
+		}
+
+		#logo {
+			width: max-content;
+			height: calc(6 * var(--u));
+			--h: calc(6 * var(--u));
+
+			display: flex;
+			align-items: center;
+			justify-content: center;
+
+			padding: 0 calc(3 * var(--u));
+
+			h1 {
+				margin: 0;
+				color: var(--text);
+				font-family: Arial;
+				font-weight: 700;
+				font-size: calc(2.5 * var(--u));
+			}
+		}
+
+		#links {
+			width: max-content;
+			height: calc(6 * var(--u));
+			--h: calc(6 * var(--u));
+
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: calc(3 * var(--u));
+
+			padding: 0 calc(3 * var(--u));
+
+			a {
+				font-size: calc(2 * var(--u));
+			}
+		}
+
+		.glass {
+			--h: 100px;
+			background: rgba(245, 245, 255, 0.11);
+			backdrop-filter: blur(20px);
+			border: calc(.2 * var(--u)) solid rgba(255, 255, 255, 0.12);
+			border-radius: calc(2 * var(--u));
+			box-shadow: inset 0 calc(.8 * var(--h)) calc(.4 * var(--h)) calc(-.4 * var(--h)) rgba(245, 245, 255, 0.06);
 		}
 
 		/**/
@@ -293,7 +382,7 @@
 				transform: translate(-50%, -50%);
 
 				background: var(--modal-bg);
-				width: 50vw;
+				width: calc(45 * var(--u));
 
 				border-radius: calc(2 * var(--u));
 
@@ -305,7 +394,6 @@
 						var(--bg4), var(--bg2)
 					);
 
-					
 					padding: calc(5 * var(--u)) 0;
 
 					h1, h2 {
@@ -394,6 +482,7 @@
 				left: initial;
 				right: 1%;
 			}
+
 		}
 	</style>
 </head>
@@ -411,8 +500,17 @@
 		</symbol>
 	</svg>
 
+	<div id="menu">
+		<div id="logo" class="glass"><h1>qchess.pro</h1></div>
+		<div id="links" class="glass">
+			<a class="underlined" href="#" target="_blank">test<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
+			<a class="underlined" href="#" target="_blank">test<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
+			<a class="underlined" href="#" target="_blank">test<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
+		</div>
+	</div>
+
 	<div id="board">
-		<div id="mobile-moves"><p>1.</p><p>e4</p><p>e5</p><p>2.</p><p>f4</p><p>f5</p><p>3.</p><p>g4</p><p>g5</p><p>4.</p><p>h4</p><p>h5</p><p>5.</p><p>d4</p><p>d5</p><p>6.</p><p>c3</p><p>c5</p><p>7.</p><p>b4</p><p>b5</p><p>8.</p><p>a4</p><p>a5</p><p>9.</p><p>c4</p></div>
+		<div id="mobile-moves"></div>
 		<div id="promote">
 			<div class="promotion" id="white-promotion" style="--f: 1;" hidden>
 				<img class="promote-option" data-value="wq" src="/img/150/wq.png">
@@ -559,17 +657,6 @@
 			['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
 			['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
 		];
-
-		// let gameBoard = [
-		// 	["r", "n", "" , "" , "r", "b", "" , "" ],
-		// 	["p", "p", "p", "" , "k", "p", "p", "p"],
-		// 	["" , "" , "" , "" , "" , "" , "" , "" ],
-		// 	["" , "P", "" , "" , "" , "B", "" , "" ],
-		// 	["" , "" , "" , "" , "" , "" , "N", "P"],
-		// 	["Q", "" , "P", "R", "" , "" , "P", "" ],
-		// 	["P", "" , "" , "P", "P", "n", "" , "P"],
-		// 	["R", "N", "B", "" , "K", "" , "" , "" ]
-		// ];
 
 		function clearPieces() {
 			document.querySelectorAll('.piece').forEach(p => p.remove());
@@ -1335,11 +1422,6 @@
 			}
 		}
 
-		// const promotion = Object.fromEntries([
-		// 	'wq', 'wn', 'wr', 'wb', 'wc',
-		// 	'bq', 'bn', 'br', 'bb', 'bc'
-		// ].map(p => [p, document.getElementById(`promote-${p}`)]))
-
 		const promotion = {
 			w: document.getElementById('white-promotion'),
 			b: document.getElementById('black-promotion')
@@ -1399,7 +1481,7 @@
 			loadFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
 			loadBoard();
 			results.wrapper.hidden = true;
-			playSound('start')
+			playSound('start');
 		}
 
 		//
@@ -1418,31 +1500,18 @@
 			}
 		});
 
-		// loadFEN('rnbqkbnr/1ppp1ppp/8/4p2Q/p1B1P3/8/PPPP1PPP/RNB1K1NR', false);
-		// loadFEN('rnbqkbnr/1ppp2pp/8/4p3/p1B1P3/5Q2/PPPP1PPP/RNB1K1NR', false);
+		newGame();
 
-		// loadFEN('r3k2r/pbppqpb1/1pn3p1/7p/1N2pPn1/1PP4N/PB1P2PP/2QRKR2 b kq f3 0 1')
-
-		// loadFEN('kn6/8/8/8/8/8/5Q2/6NK', false);
-
-		// loadFEN('kqqqqqqq/qqqqqqqq/qqqqqqqq/qqqqqqqq/QQQQQQQQ/QQQQQQQQ/QQQQQQQQ/QQQQQQQK', false);
-
-		loadFEN('8/6Q1/8/4Q3/8/8/nn6/kn5K', false);
-		loadBoard();
-
-		// loadFEN('4k3/8/4K3/4P3/8/8/8/8 w - - 0 1');
-		// newGame();
-
-		const debug = document.getElementById('debug');
-		const debug2 = document.getElementById('debug2');
-		const debug3 = document.getElementById('debug3');
-		setInterval(() => {
-			debug.innerHTML = gameBoard.map(r=>r.map(p=>p?p:'.').join('')).join('<br>');
-			const { history, ...s } = state;
-			debug2.innerHTML = `<pre>${JSON.stringify(s, null, 2)}</pre>`;
-			// debug3.innerHTML = history.square.map(e => `<p>${getSquareName(...e[0])} &rarr; ${getSquareName(...e[1])}</p>`).join('');
-			debug3.innerHTML = history.piece.slice(-10).map(e => `<p>${e}</p>`).join('');
-		});
+		// const debug = document.getElementById('debug');
+		// const debug2 = document.getElementById('debug2');
+		// const debug3 = document.getElementById('debug3');
+		// setInterval(() => {
+		// 	debug.innerHTML = gameBoard.map(r=>r.map(p=>p?p:'.').join('')).join('<br>');
+		// 	const { history, ...s } = state;
+		// 	debug2.innerHTML = `<pre>${JSON.stringify(s, null, 2)}</pre>`;
+		// 	// debug3.innerHTML = history.square.map(e => `<p>${getSquareName(...e[0])} &rarr; ${getSquareName(...e[1])}</p>`).join('');
+		// 	debug3.innerHTML = history.piece.slice(-10).map(e => `<p>${e}</p>`).join('');
+		// });
 
 		// setTimeout(() => {
 		// 	const piece = document.querySelector('.piece');
