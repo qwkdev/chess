@@ -252,10 +252,6 @@
 
 		/**/
 
-		.selected {
-			background: var(--selected);
-		}
-
 		#squares {
 			position: absolute;
 			top: 0;
@@ -283,6 +279,21 @@
 					background: var(--dark);
 				}
 
+				&.selected::before {
+					content: '';
+					position: absolute;
+					top: 0;
+					left: 0;
+
+					background: var(--selected);
+					width: 100%;
+					height: 100%;
+					
+					box-sizing: border-box;
+					z-index: 998;
+					
+				}
+
 				&.move::after, &.capture::after {
 					content: '';
 					position: absolute;
@@ -292,7 +303,7 @@
 
 					box-sizing: border-box;
 					border-radius: 50%;
-					z-index: 999;
+					z-index: 998;
 				}
 				&.move::after {
 					width: 32.5%;
@@ -314,9 +325,8 @@
 			width: var(--piece);
 			height: var(--piece);
 
-			z-index: 99;
+			z-index: 999;
 
-			transition: transform .2s;
 			transform: translate(
 				calc((var(--f) - 1) * var(--piece)),
 				calc(-1 * (var(--r) - 1) * var(--piece))
@@ -331,6 +341,15 @@
 				width: 100%;
 				height: 100%;
 				object-fit: contain;
+			}
+			&[data-drag="1"] {
+				bottom: auto;
+				top: var(--y);
+				left: var(--x);
+				transform: translate(-50%, -50%);
+			}
+			&[data-anim="1"] {
+				transition: transform .2s;
 			}
 		}
 
@@ -856,7 +875,6 @@
 
 		async function loadAudios() {
 			for (const name of audioArray) {
-				console.log(name);
 				const resp = await fetch(`audio/${name}.webm`);
 				audios[name] = await audioContext.decodeAudioData(await resp.arrayBuffer());
 			}
@@ -864,7 +882,6 @@
 		
 
 		async function playSound(name) {
-			console.log(name);
 			if (!audios[name] || !audioContext) return;
 
 			const src = audioContext.createBufferSource();
@@ -1055,7 +1072,6 @@
 			let count = 0;
 			for (let i=3; i < state.fmr; i+=2) {
 				const pos = state.history.state.at(-i);
-				console.log(count, pos[0] + encodeRepitionInfo(pos[1]));
 				if (pos[0] + encodeRepitionInfo(pos[1]) === checktfr) count++;
 				if (count >= 2) {
 					endGame(9);
@@ -1386,39 +1402,68 @@
 			return true;
 		}
 
-		function selectPiece(ele) {
+		async function makeSelection(pos) {
+			state.selected = pos;
+
 			document.querySelectorAll('.selected').forEach(e => e.classList.remove('selected'));
-			ele.classList.add('selected');
+			getSquare(pos.f, pos.r).classList.add('selected');
+
+			const t = await getLegalMoves(pos);
+			t.forEach(p => {
+				const np = getBoard(...p);
+				getSquare(...p).classList.add(np ? 'capture' : 'move')
+			});
 		}
 
+		//! TODO: BREAKS IF U GO OFF???? IDK
 		async function handleClick(e) {
 			const square = e.currentTarget;
 			const pos = getPos(square);
 			const boardPiece = getBoard(pos.f, pos.r);
 			const piece = getPiece(pos.f, pos.r);
+			if (piece) piece.dataset.drag = '2';
 
 			clearSquares();
 
 			if (state.selected === null || !(await legalMove(state.selected, pos))) {
 				if (piece) {
-					state.selected = pos;
-					selectPiece(piece);
-
-					const t = await getLegalMoves(pos);
-					t.forEach(p => {
-						const piece = getBoard(...p);
-						getSquare(...p).classList.add(piece ? 'capture' : 'move')
-					});
-				} else {
-					state.selected = null;
+					await makeSelection(pos);
+					if (piece.dataset.drag === '2') {
+						console.log('setting 1');
+						piece.dataset.drag = '1';
+					}
 				}
+				else state.selected = null;
 			} else if (state.selected) {
 				if (await legalMove(state.selected, pos)) {
+					await makeMove(state.selected, pos);
+				}
+				state.selected = null;
+			}
+
+			if (piece && piece.dataset.drag !== '1') {
+				console.log('setting 0');
+				piece.dataset.drag = '0';
+			}
+		}
+		async function handleMouseUp(e) {
+			if (!state.selected) return;
+
+			const square = e.target;
+			const pos = getPos(square);
+			const piece = getPiece(pos.f, pos.r);
+			
+			getPiece(state.selected.f, state.selected.r).dataset.drag = '0';
+
+			if (state.selected.f !== pos.f || state.selected.r !== pos.r) {
+				if (await legalMove(state.selected, pos)) {
+					clearSquares();
 					const resp = await makeMove(state.selected, pos);
+					if (!resp[0]) await makeSelection(state.selected);
+					else state.selected = null;
 				} else {
 					playSound('illegal');
 				}
-				state.selected = null;
 			}
 		}
 
@@ -1486,7 +1531,7 @@
 
 		//
 
-		document.querySelectorAll('#squares div').forEach(s => s.onclick = handleClick);
+		document.querySelectorAll('#squares div').forEach(s => s.onmousedown = handleClick);
 		document.addEventListener('keydown', e => {
 			if (e.key === 'Escape') {
 				state.selected = null;
@@ -1494,10 +1539,27 @@
 			}
 		});
 		document.addEventListener('click', e => {
-			if (e.target?.parentElement !== boardEl && e.target?.parentElement?.parentElement !== boardEl ) {
+			if (e.target?.parentElement !== boardEl && e.target?.parentElement?.parentElement !== boardEl) {
 				state.selected = null;
 				clearSquares();
 			}
+		});
+		document.addEventListener('mouseup', e => {
+			if (e.target?.parentElement !== boardEl && e.target?.parentElement?.parentElement !== boardEl) {
+				state.selected = null;
+				clearSquares();
+			} else handleMouseUp(e);
+		});
+
+		document.addEventListener('mousemove', e => {
+			const bp = boardEl.getBoundingClientRect();
+			const pos = {
+				x: Math.min(Math.max(e.x - bp.x, 0), bp.width),
+				y: Math.min(Math.max(e.y - bp.y, 0), bp.height)
+			};
+
+			boardEl.style.setProperty('--x', `${pos.x}px`);
+			boardEl.style.setProperty('--y', `${pos.y}px`);
 		});
 
 		newGame();
