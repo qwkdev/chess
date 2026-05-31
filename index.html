@@ -45,7 +45,7 @@
 			display: none;
 		}
 
-		.piece, use {
+		#board, .piece, use {
 			pointer-events: none;
 			-webkit-user-drag: none;
 			-moz-user-drag: none;
@@ -56,6 +56,9 @@
 			-moz-user-select: none;
 			-ms-user-select: none;
 			user-select: none;
+		}
+		#mobile-moves, #mobile-buttons, #squares div, #promote {
+			pointer-events: auto;
 		}
 
 		@property --tr {
@@ -107,6 +110,7 @@
 			transition: .2s;
 			z-index: 2;
 			text-decoration: none;
+			cursor: pointer;
 		}
 		.underline {
 			--widen: 0%;
@@ -195,6 +199,43 @@
 			}
 		}
 
+		#mobile-buttons {
+			z-index: 999;
+
+			position: absolute;
+			top: 100%;
+			left: 0;
+
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			align-items: center;
+			
+			box-sizing: border-box;
+
+			width: max-content;
+			min-width: 100%;
+			height: calc(8 * var(--u));
+			padding: calc(1 * var(--u));
+			gap: calc(1 * var(--u));
+
+			background: var(--bg1);
+			overflow: hidden;
+
+			button {
+				--h: calc(6 * var(--u));
+				border-radius: calc(1 * var(--u));
+
+				color: var(--text);
+				font-family: Arial;
+				font-size: calc(4 * var(--u));
+				font-weight: 700;
+
+				&.dim {
+					color: var(--text-s);
+				}
+			}
+		}
+
 		#menu {
 			position: absolute;
 			top: calc(1 * var(--u));
@@ -206,7 +247,6 @@
 
 		#logo {
 			width: max-content;
-			height: calc(6 * var(--u));
 			--h: calc(6 * var(--u));
 
 			display: flex;
@@ -226,7 +266,6 @@
 
 		#links {
 			width: max-content;
-			height: calc(6 * var(--u));
 			--h: calc(6 * var(--u));
 
 			display: flex;
@@ -243,11 +282,22 @@
 
 		.glass {
 			--h: 100px;
+			height: var(--h);
+			box-sizing: border-box;
 			background: rgba(245, 245, 255, 0.11);
 			backdrop-filter: blur(20px);
 			border: calc(.2 * var(--u)) solid rgba(255, 255, 255, 0.12);
 			border-radius: calc(2 * var(--u));
 			box-shadow: inset 0 calc(.8 * var(--h)) calc(.4 * var(--h)) calc(-.4 * var(--h)) rgba(245, 245, 255, 0.06);
+
+			transition: .2s;
+
+			&:not(.dim):hover {
+				background: rgba(245, 245, 255, 0.13);
+				box-shadow: inset 0 calc(.8 * var(--h)) calc(.4 * var(--h)) calc(-.4 * var(--h)) rgba(245, 245, 255, 0.08);
+				border-top-color: rgba(255, 255, 255, 0.15);
+				transform: scale(1.02);
+			}
 		}
 
 		/**/
@@ -320,16 +370,17 @@
 
 		.piece {
 			position: absolute;
-			bottom: 0;
+			top: 0;
 			left: 0;
 			width: var(--piece);
 			height: var(--piece);
 
 			z-index: 999;
 
+			transition: transform .1s;
 			transform: translate(
 				calc((var(--f) - 1) * var(--piece)),
-				calc(-1 * (var(--r) - 1) * var(--piece))
+				calc((8 - var(--r)) * var(--piece))
 			);
 
 			.piece2 {
@@ -343,13 +394,9 @@
 				object-fit: contain;
 			}
 			&[data-drag="1"] {
-				bottom: auto;
-				top: var(--y);
-				left: var(--x);
-				transform: translate(-50%, -50%);
-			}
-			&[data-anim="1"] {
-				transition: transform .2s;
+				transition: 0s;
+				transform: translate(calc(var(--x) - 50%), calc(var(--y) - 50%));
+				z-index: 9999;
 			}
 		}
 
@@ -368,7 +415,7 @@
 			background: #fff;
 			outline: calc(var(--piece) * .02) solid #fff;
 			box-shadow: 0 0 calc(var(--piece) * .1) 0 #000;
-			z-index: 9999;
+			z-index: 9998;
 
 			border-radius: calc(var(--piece) * .01);
 
@@ -522,14 +569,19 @@
 	<div id="menu">
 		<div id="logo" class="glass"><h1>qchess.pro</h1></div>
 		<div id="links" class="glass">
-			<a class="underlined" href="#" target="_blank">test<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
-			<a class="underlined" href="#" target="_blank">test<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
-			<a class="underlined" href="#" target="_blank">test<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
+			<a class="underlined" onclick="newGame()">New Game<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
+			<!-- <a class="underlined" href="">More Coming Soon...<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a> -->
 		</div>
 	</div>
 
 	<div id="board">
 		<div id="mobile-moves"></div>
+		<div id="mobile-buttons">
+			<button class="glass" onclick="moveHistory(-2)">&lt;&lt;</button>
+			<button class="glass" onclick="moveHistory(-1)">&lt;</button>
+			<button class="glass dim" onclick="moveHistory(1)">&gt;</button>
+			<button class="glass dim" onclick="moveHistory(2)">&gt;&gt;</button>
+		</div>
 		<div id="promote">
 			<div class="promotion" id="white-promotion" style="--f: 1;" hidden>
 				<img class="promote-option" data-value="wq" src="/img/150/wq.png">
@@ -637,11 +689,10 @@
 		}
 
 		// TODO: Load TCN
-		// TODO: Click skips anim to end
-		// TODO: ANIMS BROKEN, SHOULD WORK AS EXPECTED JUST FORCE RE-CALC BEFORE SETING TRANSITION
-		// TODO: BREAKS IF U GO OFF
-		// TODO: Piece being dragged z index over other pieces
-		// TODO: No dragging background
+
+		// TODO: Save game state
+		// TODO: Undo/Redo
+		// TODO: Desktop Move List/Buttons
 
 		// file => x
 		// rank => y
@@ -685,7 +736,7 @@
 		}
 		function clearSquares() {
 			document.querySelectorAll('#squares div').forEach(s => s.classList = '');
-			document.querySelectorAll('.piece').forEach(s => s.classList = 'piece');
+			// document.querySelectorAll('.piece').forEach(s => s.classList = 'piece');
 		}
 
 		function loadBoard(board=gameBoard) {
@@ -1108,6 +1159,16 @@
 		}
 
 		async function animate(ele, num) {
+			ele.addEventListener('animationstart', () => console.log('start'));
+			ele.addEventListener('animationend', () => console.log('end'));
+			ele.addEventListener('animationcancel', () => {
+				console.log('cancel');
+				console.log(
+					"parent still anim?",
+					ele.classList.contains("anim1")
+				);
+			});
+
 			ele.classList.add(`anim${num}`);
 			await wait(1000);
 			ele.classList.remove(`anim${num}`);
@@ -1418,7 +1479,6 @@
 			});
 		}
 
-		//! TODO: BREAKS IF U GO OFF???? IDK
 		async function handleClick(e) {
 			const square = e.currentTarget;
 			const pos = getPos(square);
@@ -1432,7 +1492,6 @@
 				if (piece) {
 					await makeSelection(pos);
 					if (piece.dataset.drag === '2') {
-						console.log('setting 1');
 						piece.dataset.drag = '1';
 					}
 				}
@@ -1445,7 +1504,6 @@
 			}
 
 			if (piece && piece.dataset.drag !== '1') {
-				console.log('setting 0');
 				piece.dataset.drag = '0';
 			}
 		}
@@ -1468,6 +1526,13 @@
 					playSound('illegal');
 				}
 			}
+		}
+		async function handleMouseOff() {
+			if (state.selected) {
+				getPiece(state.selected.f, state.selected.r).dataset.drag = '0';
+			}
+			state.selected = null;
+			clearSquares();
 		}
 
 		const promotion = {
@@ -1537,20 +1602,17 @@
 		document.querySelectorAll('#squares div').forEach(s => s.onmousedown = handleClick);
 		document.addEventListener('keydown', e => {
 			if (e.key === 'Escape') {
-				state.selected = null;
-				clearSquares();
+				handleMouseOff();
 			}
 		});
 		document.addEventListener('click', e => {
 			if (e.target?.parentElement !== boardEl && e.target?.parentElement?.parentElement !== boardEl) {
-				state.selected = null;
-				clearSquares();
+				handleMouseOff();
 			}
 		});
 		document.addEventListener('mouseup', e => {
 			if (e.target?.parentElement !== boardEl && e.target?.parentElement?.parentElement !== boardEl) {
-				state.selected = null;
-				clearSquares();
+				handleMouseOff();
 			} else handleMouseUp(e);
 		});
 
@@ -1566,22 +1628,6 @@
 		});
 
 		newGame();
-
-		// const debug = document.getElementById('debug');
-		// const debug2 = document.getElementById('debug2');
-		// const debug3 = document.getElementById('debug3');
-		// setInterval(() => {
-		// 	debug.innerHTML = gameBoard.map(r=>r.map(p=>p?p:'.').join('')).join('<br>');
-		// 	const { history, ...s } = state;
-		// 	debug2.innerHTML = `<pre>${JSON.stringify(s, null, 2)}</pre>`;
-		// 	// debug3.innerHTML = history.square.map(e => `<p>${getSquareName(...e[0])} &rarr; ${getSquareName(...e[1])}</p>`).join('');
-		// 	debug3.innerHTML = history.piece.slice(-10).map(e => `<p>${e}</p>`).join('');
-		// });
-
-		// setTimeout(() => {
-		// 	const piece = document.querySelector('.piece');
-		// 	piece.style.setProperty('--r', 4);
-		// }, 1000);
 	</script>
 </body>
 </html>
