@@ -176,10 +176,14 @@
 				align-items: center;
 				justify-content: center;
 
-				width: calc(6 * var(--u));
+				width: max-content;
+				min-width: calc(6 * var(--u));
 				height: 100%;
 				font-size: calc(2 * var(--u));
 
+				margin: 0;
+				box-sizing: border-box;
+				padding: 0 calc(1 * var(--u));
 				padding-top: calc(.1 * var(--u));
 				border-radius: calc(.75 * var(--u));
 
@@ -190,8 +194,8 @@
 				&:nth-child(3n+1) {
 					color: var(--text-s);
 				}
-				&:last-child {
-					background: var(--bg2)
+				&[data-active] {
+					background: var(--bg2);
 				}
 				&::selection {
 					background: var(--text-s);
@@ -535,6 +539,8 @@
 			font-family: monospace;
 			color: #fff;
 			font-size: 20px;
+			z-index: 9999999;
+			background: var(--bg);
 		}
 		#debug2 { left: 20%; font-size: 12px; }
 		#debug3 { left: 50%; font-size: 12px; }
@@ -577,10 +583,10 @@
 	<div id="board">
 		<div id="mobile-moves"></div>
 		<div id="mobile-buttons">
-			<button class="glass" onclick="moveHistory(-2)">&lt;&lt;</button>
-			<button class="glass" onclick="moveHistory(-1)">&lt;</button>
-			<button class="glass dim" onclick="moveHistory(1)">&gt;</button>
-			<button class="glass dim" onclick="moveHistory(2)">&gt;&gt;</button>
+			<button id="mh-start" class="glass dim" onclick="moveHistory('start')">&lt;&lt;</button>
+			<button id="mh-prev" class="glass dim" onclick="moveHistory('prev')">&lt;</button>
+			<button id="mh-next" class="glass dim" onclick="moveHistory('next')">&gt;</button>
+			<button id="mh-end" class="glass dim" onclick="moveHistory('end')">&gt;&gt;</button>
 		</div>
 		<div id="promote">
 			<div class="promotion" id="white-promotion" style="--f: 1;" hidden>
@@ -721,6 +727,7 @@
 				state: []
 			}
 		};
+		let defaultStateJSON = JSON.stringify(state);
 		let gameBoard = [
 			['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
 			['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
@@ -731,6 +738,8 @@
 			['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
 			['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
 		];
+		let tempStatePos = null;
+
 		function clearPieces() {
 			document.querySelectorAll('.piece').forEach(p => p.remove());
 		}
@@ -851,6 +860,88 @@
 
 			fen.push(s.enpassant === null ? '-' : getSquareName(s.enpassant.f, s.enpassant.r));
 			return fen.join(' ');
+		}
+
+		const moveHistoryButtons = {
+			start: document.getElementById('mh-start'),
+			prev: document.getElementById('mh-prev'),
+			next: document.getElementById('mh-next'),
+			end: document.getElementById('mh-end')
+		};
+		function syncTempState(buttonsOnly=false, sound=false) {
+			if (tempStatePos >= state.history.state.length - 1) tempStatePos = null;
+			if (tempStatePos < -1) {
+				tempStatePos = -1;
+				sound = false;
+			}
+
+			if (state.history.state.length === 0) {
+				moveHistoryButtons.start.classList.add('dim');
+				moveHistoryButtons.prev.classList.add('dim');
+				moveHistoryButtons.next.classList.add('dim');
+				moveHistoryButtons.end.classList.add('dim');
+				return;
+			}
+
+			moveHistoryButtons.start.classList.remove('dim');
+			moveHistoryButtons.prev.classList.remove('dim');
+			moveHistoryButtons.next.classList.remove('dim');
+			moveHistoryButtons.end.classList.remove('dim');
+			if (tempStatePos === null) {
+				moveHistoryButtons.next.classList.add('dim');
+				moveHistoryButtons.end.classList.add('dim');
+			} else if (tempStatePos === -1) {
+				moveHistoryButtons.start.classList.add('dim');
+				moveHistoryButtons.prev.classList.add('dim');
+			}
+
+			if (sound) {
+				if (tempStatePos === -1) playSound('move');
+				else playMoveSound(state.history.piece.at(tempStatePos ?? -1));
+			}
+
+			moveLists.forEach(ele => {
+				const oldActive = ele.querySelector('p[data-active]');
+				if (tempStatePos === -1) {
+					oldActive?.removeAttribute('data-active');
+					return;
+				}
+				const newActive = Array.from(ele.querySelectorAll('p')).filter((e, i) => i%3 !== 0).at(tempStatePos ?? -1);
+				if (newActive !== oldActive) {
+					oldActive?.removeAttribute('data-active');
+					newActive.dataset.active = '';
+				}
+			});
+
+			if (buttonsOnly) return;
+
+			let tempState;
+			if (tempStatePos === -1) {
+				tempState = ['rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR', JSON.parse(defaultStateJSON)];
+			} else {
+				tempState = state.history.state.at(tempStatePos ?? -1);
+			}
+
+			loadFEN(tempState[0], false);
+			state = {...tempState[1], history: state.history};
+
+			loadBoard();
+		}
+
+		function moveHistory(delta) {
+			let sound = true;
+
+			if (delta === 'next' || delta === 'end') {
+				if (tempStatePos === null) return;
+				if (delta === 'next') tempStatePos++;
+				if (delta === 'end') tempStatePos = null;
+			}
+			if (delta === 'prev') tempStatePos = tempStatePos === null ? state.history.state.length - 2 : tempStatePos - 1;
+			if (delta === 'start') {
+				if (tempStatePos === -1) sound = false;
+				tempStatePos = -1;
+			}
+			syncTempState(false, sound);
 		}
 
 		function getSquareColor(f, r) {
@@ -1114,13 +1205,26 @@
 		}
 
 		const moveLists = [document.getElementById('mobile-moves')];
-		function logMove(from, to, algebraic='') {
-			state.history.square.push([[from.f, from.r], [to.f, to.r]]);
-			state.history.piece.push(algebraic || '');
+		function logMove(from, to, algebraic=null) {
+			let buttonsOnly = true;
+			if (tempStatePos !== null) {
+				for (const t in state.history) {
+					state.history[t] = state.history[t].slice(0, tempStatePos+1)
+				}
+				moveLists.forEach(ele => {
+					ele.innerHTML = state.history.piece.flatMap(
+						(m, i) => i % 2 === 0 ? [`${Math.floor(i/2) + 1}.`, m.join('')] : [m.join('')]
+					).map(e => `<p>${e}</p>`).join('');
+				});
+				tempStatePos = null;
+				buttonsOnly = false;
+			}
 
-			const { history, ...s } = state;
+			state.history.square.push([[from.f, from.r], [to.f, to.r]]);
+			state.history.piece.push(algebraic);
+
 			const current = getFEN(false);
-			state.history.state.push([current, JSON.parse(JSON.stringify(s))]);
+			state.history.state.push([current, null]);
 
 			const checktfr = current + encodeRepitionInfo();
 			let count = 0;
@@ -1136,6 +1240,9 @@
 			state.halfmoves++;
 			state.turn = state.turn === 'w' ? 'b' : 'w';
 
+			const { history, ...s } = state;
+			state.history.state[state.history.state.length - 1][1] = JSON.parse(JSON.stringify(s));
+
 			if (algebraic) {
 				moveLists.forEach(ele => {
 					if (state.turn === 'b') {
@@ -1144,10 +1251,12 @@
 						ele.appendChild(moveNumEle);
 					}
 					const moveEle = document.createElement('p');
-					moveEle.innerText = algebraic;
+					moveEle.innerText = algebraic.join('');
 					ele.appendChild(moveEle);
 				});
 			}
+
+			syncTempState(buttonsOnly);
 		}
 
 		function simpleMove(from, to) {
@@ -1186,7 +1295,7 @@
  
 		// 0piece|castle 1disambiguate? 2capture? 3to_square 4promote? 5check(mate)?
 		async function makeMove(from, to, sim=false) {
-			const moves = [];
+			let moves = [];
 			let queue = [];
 
 			let algebraic = ['', '', '', '', '', ''];
@@ -1336,7 +1445,7 @@
 				}
 			}
 
-			logMove(from, to, algebraic.join(''));
+			logMove(from, to, algebraic);
 
 			for (const [e, to] of queue) {
 				if (to === null) showSimpleRemove(e);
@@ -1498,7 +1607,7 @@
 				else state.selected = null;
 			} else if (state.selected) {
 				if (await legalMove(state.selected, pos)) {
-					await makeMove(state.selected, pos);
+					const resp = await makeMove(state.selected, pos);
 				}
 				state.selected = null;
 			}
@@ -1520,8 +1629,8 @@
 				if (await legalMove(state.selected, pos)) {
 					clearSquares();
 					const resp = await makeMove(state.selected, pos);
-					if (!resp[0]) await makeSelection(state.selected);
-					else state.selected = null;
+					if (resp[0]) state.selected = null;
+					else await makeSelection(state.selected);
 				} else {
 					playSound('illegal');
 				}
@@ -1626,6 +1735,20 @@
 			boardEl.style.setProperty('--x', `${pos.x}px`);
 			boardEl.style.setProperty('--y', `${pos.y}px`);
 		});
+
+		//
+
+		// const debug = document.getElementById('debug');
+		// const debug2 = document.getElementById('debug2');
+		// const debug3 = document.getElementById('debug3');
+		// setInterval(() => {
+		// 	debug.innerHTML = gameBoard.map(r=>r.map(p=>p?p:'.').join('')).join('<br>');
+		// 	const { history, ...s } = state;
+		// 	debug2.innerHTML = `<pre>${JSON.stringify(s, null, 2)}\nTSP:${tempStatePos}</pre>`;
+		// 	debug3.innerHTML = history.piece.slice(-10).map(e => `<p>${e.join('')}</p>`).join('');
+		// });
+
+		//
 
 		newGame();
 	</script>
