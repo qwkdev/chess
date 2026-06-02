@@ -8,6 +8,7 @@
 	<style>
 		:root {
 			--u: 1.2vw;
+			--side-width: 30vh;
 
 			--px: 1px;
 			--piece: round(calc(100vw / 8), var(--px));
@@ -145,8 +146,6 @@
 			box-sizing: border-box;
 		}
 
-		/**/
-
 		#mobile-moves {
 			z-index: 999;
 
@@ -156,8 +155,6 @@
 
 			display: flex;
 			align-items: center;
-			/* grid-template-rows: 100%; */
-			/* grid-auto-columns: max-content; */
 			
 			box-sizing: border-box;
 
@@ -175,31 +172,34 @@
 				display: flex;
 				align-items: center;
 				justify-content: center;
+				text-align: center;
 
 				width: max-content;
 				min-width: calc(6 * var(--u));
-				height: 100%;
-				font-size: calc(2 * var(--u));
+			}
+		}
 
-				margin: 0;
-				box-sizing: border-box;
-				padding: 0 calc(1 * var(--u));
-				padding-top: calc(.1 * var(--u));
-				border-radius: calc(.75 * var(--u));
+		#mobile-moves p, #desktop-moves p {
+			height: 100%;
+			font-size: calc(2 * var(--u));
 
-				color: var(--text);
-				font-family: Arial;
-				text-align: center;
+			margin: 0;
+			box-sizing: border-box;
+			padding: 0 calc(1 * var(--u));
+			padding-top: calc(.1 * var(--u));
+			border-radius: calc(.75 * var(--u));
 
-				&:nth-child(3n+1) {
-					color: var(--text-s);
-				}
-				&[data-active] {
-					background: var(--bg2);
-				}
-				&::selection {
-					background: var(--text-s);
-				}
+			color: var(--text);
+			font-family: Arial;
+
+			&:nth-child(3n+1) {
+				color: var(--text-s);
+			}
+			&[data-active] {
+				background: var(--bg2);
+			}
+			&::selection {
+				background: var(--text-s);
 			}
 		}
 
@@ -210,19 +210,24 @@
 			top: 100%;
 			left: 0;
 
-			display: grid;
 			grid-template-columns: repeat(4, 1fr);
+			height: calc(8 * var(--u));
+
+			background: var(--bg1);
+		}
+
+		#mobile-buttons, #desktop-buttons {
+			display: grid;
 			align-items: center;
 			
 			box-sizing: border-box;
 
 			width: max-content;
 			min-width: 100%;
-			height: calc(8 * var(--u));
+			
 			padding: calc(1 * var(--u));
 			gap: calc(1 * var(--u));
 
-			background: var(--bg1);
 			overflow: hidden;
 
 			button {
@@ -240,6 +245,45 @@
 			}
 		}
 
+		#desktop {
+			z-index: 999;
+
+			position: absolute;
+			top: 0;
+			right: 0;
+
+			width: var(--side-width);
+			height: 100%;
+
+			display: none;
+			/* display: flex; */
+			flex-direction: column;
+
+			background: var(--bg1);
+		}
+		#desktop-moves {
+			flex: 1;
+			/* min-height: 0; */
+
+			width: 100%;
+			padding: calc(.5 * var(--u));
+
+			display: grid;
+			grid-template-columns: repeat(3, minmax(calc(6 * var(--u)), max-content));
+			grid-auto-rows: calc(3 * var(--u));
+			gap: calc(.5 * var(--u));
+
+			overflow: scroll;
+
+			p {
+				width: min-content;
+			}
+		}
+		#desktop-buttons {
+			grid-template-columns: repeat(2, 1fr);
+			height: calc(15 * var(--u));
+		}
+
 		#menu {
 			position: absolute;
 			top: calc(1 * var(--u));
@@ -247,6 +291,8 @@
 
 			display: flex;
 			gap: calc(1 * var(--u));
+
+			z-index: 999;
 		}
 
 		#logo {
@@ -303,8 +349,6 @@
 				transform: scale(1.02);
 			}
 		}
-
-		/**/
 
 		#squares {
 			position: absolute;
@@ -550,6 +594,12 @@
 				--u: 1vh;
 				--piece: round(calc(100vh / 8), var(--px));
 			}
+			#mobile-moves, #mobile-buttons {
+				display: none;
+			}
+			#desktop {
+				display: flex;
+			}
 			#debug2 {
 				left: initial;
 				right: 1%;
@@ -675,6 +725,16 @@
 		</div> -->
 	</div>
 
+	<div id="desktop">
+		<div id="desktop-moves"></div>
+		<div id="desktop-buttons">
+			<button id="dh-prev" class="glass dim" onclick="moveHistory('prev')">&lt;</button>
+			<button id="dh-next" class="glass dim" onclick="moveHistory('next')">&gt;</button>
+			<button id="dh-start" class="glass dim" onclick="moveHistory('start')">&lt;&lt;</button>
+			<button id="dh-end" class="glass dim" onclick="moveHistory('end')">&gt;&gt;</button>
+		</div>
+	</div>
+
 	<div id="result-wrapper" hidden>
 		<div id="result">
 			<div id="condition">
@@ -697,7 +757,7 @@
 		// TODO: Load TCN
 
 		// TODO: Save game state
-		// TODO: Desktop Move List/Buttons
+		// TODO: Fix inbetween desktop/mobile
 
 		// file => x
 		// rank => y
@@ -861,12 +921,16 @@
 			return fen.join(' ');
 		}
 
-		const moveHistoryButtons = {
-			start: document.getElementById('mh-start'),
-			prev: document.getElementById('mh-prev'),
-			next: document.getElementById('mh-next'),
-			end: document.getElementById('mh-end')
-		};
+		const moveHistoryButtons = [
+			document.getElementById('mh-start'),
+			document.getElementById('mh-prev'),
+			document.getElementById('mh-next'),
+			document.getElementById('mh-end'),
+			document.getElementById('dh-start'),
+			document.getElementById('dh-prev'),
+			document.getElementById('dh-next'),
+			document.getElementById('dh-end')
+		];
 		function syncTempState(buttonsOnly=false, sound=false) {
 			if (tempStatePos >= state.history.state.length - 1) tempStatePos = null;
 			if (tempStatePos < -1) {
@@ -875,23 +939,15 @@
 			}
 
 			if (state.history.state.length === 0) {
-				moveHistoryButtons.start.classList.add('dim');
-				moveHistoryButtons.prev.classList.add('dim');
-				moveHistoryButtons.next.classList.add('dim');
-				moveHistoryButtons.end.classList.add('dim');
+				moveHistoryButtons.forEach(b => b?.classList.add('dim'));
 				return;
 			}
 
-			moveHistoryButtons.start.classList.remove('dim');
-			moveHistoryButtons.prev.classList.remove('dim');
-			moveHistoryButtons.next.classList.remove('dim');
-			moveHistoryButtons.end.classList.remove('dim');
+			moveHistoryButtons.forEach(b => b?.classList.remove('dim'));
 			if (tempStatePos === null) {
-				moveHistoryButtons.next.classList.add('dim');
-				moveHistoryButtons.end.classList.add('dim');
+				[2, 3, 6, 7].forEach(n => moveHistoryButtons[n]?.classList.add('dim'));
 			} else if (tempStatePos === -1) {
-				moveHistoryButtons.start.classList.add('dim');
-				moveHistoryButtons.prev.classList.add('dim');
+				[0, 1, 4, 5].forEach(n => moveHistoryButtons[n]?.classList.add('dim'));
 			}
 
 			if (sound) {
@@ -910,6 +966,10 @@
 					oldActive?.removeAttribute('data-active');
 					newActive.dataset.active = '';
 				}
+			});
+			moveLists[1].scrollTo({
+				top: moveLists[1].scrollHeight,
+				behavior: 'smooth'
 			});
 
 			if (buttonsOnly) return;
@@ -1203,7 +1263,10 @@
 			return false;
 		}
 
-		const moveLists = [document.getElementById('mobile-moves')];
+		const moveLists = [
+			document.getElementById('mobile-moves'),
+			document.getElementById('desktop-moves')
+		];
 		function logMove(from, to, algebraic=null) {
 			let buttonsOnly = true;
 			if (tempStatePos !== null) {
@@ -1214,6 +1277,10 @@
 					ele.innerHTML = state.history.piece.flatMap(
 						(m, i) => i % 2 === 0 ? [`${Math.floor(i/2) + 1}.`, m.join('')] : [m.join('')]
 					).map(e => `<p>${e}</p>`).join('');
+				});
+				moveLists[1].scrollTo({
+					top: moveLists[1].scrollHeight,
+					behavior: 'smooth'
 				});
 				tempStatePos = null;
 				buttonsOnly = false;
@@ -1252,6 +1319,10 @@
 					const moveEle = document.createElement('p');
 					moveEle.innerText = algebraic.join('');
 					ele.appendChild(moveEle);
+				});
+				moveLists[1].scrollTo({
+					top: moveLists[1].scrollHeight,
+					behavior: 'smooth'
 				});
 			}
 
