@@ -30,13 +30,18 @@
 		const msg = document.getElementById('msg');
 		const path = window.location.pathname.slice(1);
 		for (const p of [
-			'game/',
-			'http://www.chess.com/game/',
-			'https://www.chess.com/game/',
 			'analysis/game/live/',
-			'http://www.chess.com/analysis/game/live/',
-			'https://www.chess.com/analysis/game/live/'
-		]) {
+			'game/live',
+			'game/'
+		].flatMap(e => [
+			e,
+			`http://www.chess.com/${e}`,
+			`https://www.chess.com/${e}`,
+			`http://chess.com/${e}`,
+			`https://chess.com/${e}`,
+			`www.chess.com/${e}`,
+			`chess.com/${e}`,
+		])) {
 			if (path.startsWith(p)) {
 				const code = path.slice(p.length).split('/')[0];
 				msg.innerText = code;
