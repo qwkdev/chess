@@ -191,6 +191,7 @@
 
 			color: var(--text);
 			font-family: Arial;
+			white-space: nowrap;
 
 			&:nth-child(3n+1) {
 				color: var(--text-s);
@@ -1528,9 +1529,8 @@
 			return [true, capture ? capture : null];
 		}
 
-		async function canCastleThrough(color, f, r, check=true) {
-			if (getBoard(f, r) !== '') return false;
-			if (!check) return true;
+		async function canCastleThrough(color, f, r, checkEmpty=true) {
+			if (checkEmpty && getBoard(f, r) !== '') return false;
 
 			const king = color === 'w' ? 'K' : 'k';
 			const simBoard = gameBoard.map(r => r.map(p => p === king ? '' : p));
@@ -1590,7 +1590,12 @@
 			}
 
 			const castlingRank = color === 'w' ? 1 : 8;
-			if (pType === 'k' && pos.f === 5 && pos.r === castlingRank) {
+			if (
+				pType === 'k' &&
+				pos.f === 5 &&
+				pos.r === castlingRank &&
+				!(await checkCheck(gameBoard, color))
+			) {
 				if (
 					state.castling[color].k &&
 					(await canCastleThrough(color, 6, castlingRank)) &&
