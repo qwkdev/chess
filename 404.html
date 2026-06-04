@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>qChess</title>
+
+	<style>
+		body {
+			background: #000;
+			overflow: hidden;
+			margin: 0;
+		}
+		p {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+
+			color: #fff;
+			font-family: Arial;
+			font-size: 5vh;
+			margin: 0;
+		}
+	</style>
+</head>
+<body>
+	<p id="msg">Loading...</p>
+	<script>
+		const msg = document.getElementById('msg');
+		const path = window.location.pathname.slice(1);
+		for (const p of [
+			'game/',
+			'http://www.chess.com/game/',
+			'https://www.chess.com/game/',
+			'analysis/game/live/',
+			'http://www.chess.com/analysis/game/live/',
+			'https://www.chess.com/analysis/game/live/'
+		]) {
+			if (path.startsWith(p)) {
+				const code = path.slice(p.length).split('/')[0];
+				msg.innerText = code;
+				// window.location.href = `${code}`;
+				
+				break;
+			}
+		}
+	</script>
+</body>
+</html>
