@@ -755,10 +755,10 @@
 			return new Promise(r => setTimeout(r, ms));
 		}
 
-		// TODO: Load TCN
-
+		// TODO: Click on algebraic
 		// TODO: Save game state
 		// TODO: Fix inbetween desktop/mobile
+		// TODO: Unify as one qChess API (for analysis, online, fairy, etc)
 
 		// file => x
 		// rank => y
@@ -1365,7 +1365,7 @@
 		}
  
 		// 0piece|castle 1disambiguate? 2capture? 3to_square 4promote? 5check(mate)?
-		async function makeMove(from, to, sim=false) {
+		async function makeMove(from, to, sim=false, skip=false, autoPromote=null) {
 			let moves = [];
 			let queue = [];
 
@@ -1407,7 +1407,7 @@
 			}
 
 			if (!sim && pType === 'p' && to.r === (color === 'w' ? 8 : 1)) {
-				const resp = await promote(color, from, to);
+				const resp = await promote(color, from, to, autoPromote);
 				if (!resp[1]) return [false, null];
 
 				defaultMove = false;
@@ -1518,13 +1518,15 @@
 
 			logMove(from, to, algebraic);
 
-			for (const [e, to] of queue) {
-				if (to === null) showSimpleRemove(e);
-				else await showSimpleMove(e, to);
-			}
+			if (!skip) {
+				for (const [e, to] of queue) {
+					if (to === null) showSimpleRemove(e);
+					else await showSimpleMove(e, to);
+				}
 
-			playMoveSound(algebraic);
-			await checkGameEnded();
+				playMoveSound(algebraic);
+				await checkGameEnded();
+			}
 
 			return [true, capture ? capture : null];
 		}
@@ -1724,35 +1726,41 @@
 			b: document.getElementById('black-promotion')
 		}
 
-		async function promote(color, from, to) {
-			const pawn = getPiece(from.f, from.r);
-			pawn.hidden = true;
-
-			promotion.w.hidden = true;
-			promotion.b.hidden = true;
-			
-			const pDialog = promotion[color === 'w' ? 'w' : 'b'];
-			pDialog.style.setProperty('--f', to.f);
-			pDialog.hidden = false;
-			
+		async function promote(color, from, to, auto=null) {
 			const pRankNum = color === 'w' ? 8 : 1;
-			const pTo = await new Promise(res => {
-				setTimeout(() => {
-					document.addEventListener('click', e => {
-						if (e.target.classList.contains('promote-option')) {
-							res(e.target.dataset.value);
-						} else res(null);
-					}, { once: true });
-				}, 0);
-			});
 
-			if (!pTo) {
-				pawn.hidden = false;
+			let pTo;
+			if (!auto) {
+				const pawn = getPiece(from.f, from.r);
+				pawn.hidden = true;
+
 				promotion.w.hidden = true;
 				promotion.b.hidden = true;
-				return [[], false, null, null];
-			}
+				
+				const pDialog = promotion[color === 'w' ? 'w' : 'b'];
+				pDialog.style.setProperty('--f', to.f);
+				pDialog.hidden = false;
+			
+				pTo = await new Promise(res => {
+					setTimeout(() => {
+						document.addEventListener('click', e => {
+							if (e.target.classList.contains('promote-option')) {
+								res(e.target.dataset.value);
+							} else res(null);
+						}, { once: true });
+					}, 0);
+				});
 
+				if (!pTo) {
+					pawn.hidden = false;
+					promotion.w.hidden = true;
+					promotion.b.hidden = true;
+					return [[], false, null, null];
+				}
+			} else {
+				pTo = color + auto;
+			}
+			
 			const piece = pTo[0] === 'w' ? pTo[1].toUpperCase() : pTo[1];
 			let queue = [];
 			let capture = getBoard(to.f, to.r);
@@ -1761,13 +1769,15 @@
 			gameBoard[8 - to.r][to.f - 1] = piece;
 			gameBoard[8 - from.r][from.f - 1] = '';
 			
-			pawn.style.setProperty('--f', to.f);
-			pawn.style.setProperty('--r', to.r);
-			pawn.querySelector('img').src = `/img/150/${pTo}.png`;
-			
-			pawn.hidden = false;
-			promotion.w.hidden = true;
-			promotion.b.hidden = true;
+			if (!auto) {
+				pawn.style.setProperty('--f', to.f);
+				pawn.style.setProperty('--r', to.r);
+				pawn.querySelector('img').src = `/img/150/${pTo}.png`;
+				
+				pawn.hidden = false;
+				promotion.w.hidden = true;
+				promotion.b.hidden = true;
+			}
 
 			return [queue, true, pTo[1], capture];
 		}
@@ -1776,6 +1786,39 @@
 
 		function newGame() {
 			loadFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+			loadBoard();
+			results.wrapper.hidden = true;
+			playSound('start');
+		}
+
+		var tcnKey = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?{~}(^)[_]@#$,./&-*++=';
+		function decodeTCNMove(move) {
+			var c, a, g = move.length, f = [];
+			for (c = 0; c < g; c += 2) {
+				var d = {}, b = tcnKey.indexOf(move[c]);
+				63 < (a = tcnKey.indexOf(move[c + 1])) && (d.promotion = 'qnrbkp'[Math.floor((a - 64) / 3)], a = b + (16 > b ? -8 : 8) + (a - 1) % 3 - 1);
+				75 < b ? d.drop = 'qnrbkp'[b - 79] : d.from = tcnKey[b % 8] + (Math.floor(b / 8) + 1);
+				d.to = tcnKey[a % 8] + (Math.floor(a / 8) + 1);
+				f.push(d);
+			}
+			return f[0];
+		}
+		function parseTCN(tcn) {
+			let resp = [];
+			for (let i=0; i < tcn.length; i += 2) {
+				resp.push(decodeTCNMove(tcn[i]+tcn[i+1]));
+			}
+			return resp;
+		}
+		async function loadTCN(tcn) {
+			const moves = parseTCN(tcn);
+			
+			loadFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+			
+			for (const move of moves) {
+				await makeMove(getNameSquare(move.from), getNameSquare(move.to), false, true, move.promotion ?? null);
+			}
+
 			loadBoard();
 			results.wrapper.hidden = true;
 			playSound('start');
