@@ -28,26 +28,14 @@
 	<p id="msg">Loading...</p>
 	<script>
 		const msg = document.getElementById('msg');
-		const path = window.location.pathname.slice(1);
-		for (const p of [
-			'analysis/game/live/',
-			'game/live/',
-			'game/'
-		].flatMap(e => [
-			e,
-			`http://www.chess.com/${e}`,
-			`https://www.chess.com/${e}`,
-			`http://chess.com/${e}`,
-			`https://chess.com/${e}`,
-			`www.chess.com/${e}`,
-			`chess.com/${e}`,
-		])) {
-			if (path.startsWith(p)) {
-				const code = path.slice(p.length).split('/')[0];
-				window.location.href = `/analysis/load?c=${code}`;
-				
-				break;
-			}
+		const params = new URLSearchParams(window.location.search);
+		
+		if (params.get('c')) {
+			fetch(`https://www.chess.com/callback/live/game/${params.get('c')}`)
+				.then(r => r.json())
+				.then(data => {
+					console.log(data);
+				});
 		}
 	</script>
 </body>
