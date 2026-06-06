@@ -31,10 +31,16 @@
 		const params = new URLSearchParams(window.location.search);
 		
 		if (params.get('c')) {
-			fetch(`https://www.chess.com/callback/live/game/${params.get('c')}`)
+			fetch(`https://api.qchess.pro/?s=c&c=${params.get('c')}`)
 				.then(r => r.json())
 				.then(data => {
-					console.log(data);
+					window.location.href = `/analysis?${encodeURIComponent(data.moveList)}`;
+				});
+		} else if (params.get('l')) {
+			fetch(`https://api.qchess.pro/?s=l&c=${params.get('l')}`)
+				.then(r => r.json())
+				.then(data => {
+					window.location.href = `/analysis/load/algebraic?${encodeURIComponent(data.moves)}`;
 				});
 		}
 	</script>
