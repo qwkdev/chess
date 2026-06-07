@@ -1,3 +1,8 @@
+const defaults = {
+	end: true
+};
+const cfg = { ...defaults, ...(window.chess || {})};
+
 async function wait(ms) {
 	return new Promise(r => setTimeout(r, ms));
 }
@@ -378,7 +383,7 @@ function endGame(code) {
 	state.end = code;
 }
 async function checkGameEnded() {
-	if (state.end === null) return;
+	if (state.end === null || !cfg.end) return;
 	const [winner, reason] = winConditions[state.end];
 	results.winner.innerText = winner ? (winner === 'w' ? 'White' : 'Black') + ' Wins' : 'Draw';
 	results.reason.innerText = 'By ' + reason;
@@ -1097,3 +1102,17 @@ document.addEventListener('mousemove', e => {
 	boardEl.style.setProperty('--x', `${pos.x}px`);
 	boardEl.style.setProperty('--y', `${pos.y}px`);
 });
+
+//
+
+// const debug = document.getElementById('debug');
+// const debug2 = document.getElementById('debug2');
+// const debug3 = document.getElementById('debug3');
+// setInterval(() => {
+// 	debug.innerHTML = gameBoard.map(r=>r.map(p=>p?p:'.').join('')).join('<br>');
+// 	const { history, ...s } = state;
+// 	debug2.innerHTML = `<pre>${JSON.stringify(s, null, 2)}\nTSP:${tempStatePos}</pre>`;
+// 	debug3.innerHTML = history.piece.slice(-10).map(e => `<p>${e.join('')}</p>`).join('');
+// });
+
+//
