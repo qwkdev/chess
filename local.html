@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>qChess</title>
+
+	<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+	<p id="debug"></p>
+	<p id="debug2"></p>
+	<p id="debug3"></p>
+
+	<svg style="display: none">
+		<symbol id="icon-check" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<path d="M4 12.6111L8.92308 17.5L20 6.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+		</symbol>
+		<symbol id="icon-x" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<path d="M6 6L18 18M18 6L6 18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+		</symbol>
+	</svg>
+
+	<div id="menu">
+		<div id="logo" class="glass"><h1>qchess.pro</h1></div>
+		<div id="links" class="glass">
+			<a class="underlined" onclick="newGame()">New Game<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
+			<!-- <a class="underlined" href="">More Coming Soon...<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a> -->
+		</div>
+	</div>
+
+	<div id="board">
+		<div id="mobile-moves"></div>
+		<div id="mobile-buttons">
+			<button id="mh-start" class="glass dim" onclick="moveHistory('start')">&lt;&lt;</button>
+			<button id="mh-prev" class="glass dim" onclick="moveHistory('prev')">&lt;</button>
+			<button id="mh-next" class="glass dim" onclick="moveHistory('next')">&gt;</button>
+			<button id="mh-end" class="glass dim" onclick="moveHistory('end')">&gt;&gt;</button>
+		</div>
+		<div id="promote">
+			<div class="promotion" id="white-promotion" style="--f: 1;" hidden>
+				<img class="promote-option" data-value="wq" src="/img/150/wq.png">
+				<img class="promote-option" data-value="wn" src="/img/150/wn.png">
+				<img class="promote-option" data-value="wr" src="/img/150/wr.png">
+				<img class="promote-option" data-value="wb" src="/img/150/wb.png">
+				<svg><use href="#icon-x"/></svg>
+			</div>
+			<div class="promotion" id="black-promotion" style="--f: 1;" hidden>
+				<svg><use href="#icon-x"/></svg>
+				<img class="promote-option" data-value="bb" src="/img/150/bb.png">
+				<img class="promote-option" data-value="br" src="/img/150/br.png">
+				<img class="promote-option" data-value="bn" src="/img/150/bn.png">
+				<img class="promote-option" data-value="bq" src="/img/150/bq.png">
+			</div>
+		</div>
+		<div id="squares">
+			<div id="square-18"></div>
+			<div id="square-28"></div>
+			<div id="square-38"></div>
+			<div id="square-48"></div>
+			<div id="square-58"></div>
+			<div id="square-68"></div>
+			<div id="square-78"></div>
+			<div id="square-88"></div>
+			<div id="square-17"></div>
+			<div id="square-27"></div>
+			<div id="square-37"></div>
+			<div id="square-47"></div>
+			<div id="square-57"></div>
+			<div id="square-67"></div>
+			<div id="square-77"></div>
+			<div id="square-87"></div>
+			<div id="square-16"></div>
+			<div id="square-26"></div>
+			<div id="square-36"></div>
+			<div id="square-46"></div>
+			<div id="square-56"></div>
+			<div id="square-66"></div>
+			<div id="square-76"></div>
+			<div id="square-86"></div>
+			<div id="square-15"></div>
+			<div id="square-25"></div>
+			<div id="square-35"></div>
+			<div id="square-45"></div>
+			<div id="square-55"></div>
+			<div id="square-65"></div>
+			<div id="square-75"></div>
+			<div id="square-85"></div>
+			<div id="square-14"></div>
+			<div id="square-24"></div>
+			<div id="square-34"></div>
+			<div id="square-44"></div>
+			<div id="square-54"></div>
+			<div id="square-64"></div>
+			<div id="square-74"></div>
+			<div id="square-84"></div>
+			<div id="square-13"></div>
+			<div id="square-23"></div>
+			<div id="square-33"></div>
+			<div id="square-43"></div>
+			<div id="square-53"></div>
+			<div id="square-63"></div>
+			<div id="square-73"></div>
+			<div id="square-83"></div>
+			<div id="square-12"></div>
+			<div id="square-22"></div>
+			<div id="square-32"></div>
+			<div id="square-42"></div>
+			<div id="square-52"></div>
+			<div id="square-62"></div>
+			<div id="square-72"></div>
+			<div id="square-82"></div>
+			<div id="square-11"></div>
+			<div id="square-21"></div>
+			<div id="square-31"></div>
+			<div id="square-41"></div>
+			<div id="square-51"></div>
+			<div id="square-61"></div>
+			<div id="square-71"></div>
+			<div id="square-81"></div>
+		</div>
+		<!-- <div class="piece" style="--f: 5; --r: 2;">
+			<img src="/img/150/wp.png">
+		</div> -->
+	</div>
+
+	<div id="desktop">
+		<div id="desktop-moves"></div>
+		<div id="desktop-buttons">
+			<button id="dh-prev" class="glass dim" onclick="moveHistory('prev')">&lt;</button>
+			<button id="dh-next" class="glass dim" onclick="moveHistory('next')">&gt;</button>
+			<button id="dh-start" class="glass dim" onclick="moveHistory('start')">&lt;&lt;</button>
+			<button id="dh-end" class="glass dim" onclick="moveHistory('end')">&gt;&gt;</button>
+		</div>
+	</div>
+
+	<div id="result-wrapper" hidden>
+		<div id="result">
+			<div id="condition">
+				<h1>White Wins</h1>
+				<h2>By Checkmate</h2>
+			</div>
+			<div id="options">
+				<button class="btn">Coming Soon</button>
+				<button class="btn" onclick="newGame()">New Game</button>
+			</div>
+			<p id="watermark">qchess.pro</p>
+		</div>
+	</div>
+
+	<script src="/chess.js"></script>
+	<script>
+		newGame();
+	</script>
+</body>
+</html>

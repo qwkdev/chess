@@ -1,7 +1,12 @@
 const defaults = {
-	end: true
+	end: true,
+	onmove: null,
+	color: null,
+	ready: true
 };
-const cfg = { ...defaults, ...(window.chess || {})};
+function cfg() {
+	return { ...defaults, ...(window.chess || {})};
+}
 
 async function wait(ms) {
 	return new Promise(r => setTimeout(r, ms));
@@ -333,8 +338,6 @@ async function loadAudios() {
 		audios[name] = await audioContext.decodeAudioData(await resp.arrayBuffer());
 	}
 }
-
-
 async function playSound(name) {
 	if (!audios[name] || !audioContext) return;
 
@@ -344,8 +347,6 @@ async function playSound(name) {
 	src.connect(audioContext.destination);
 	src.start(0);
 }
-
-
 function playMoveSound(algebraic) {
 	let sound;
 	if (algebraic[5]) sound = 'check';
@@ -383,7 +384,7 @@ function endGame(code) {
 	state.end = code;
 }
 async function checkGameEnded() {
-	if (state.end === null || !cfg.end) return;
+	if (state.end === null || !cfg().end) return;
 	const [winner, reason] = winConditions[state.end];
 	results.winner.innerText = winner ? (winner === 'w' ? 'White' : 'Black') + ' Wins' : 'Draw';
 	results.reason.innerText = 'By ' + reason;
@@ -393,14 +394,6 @@ async function checkGameEnded() {
 	playSound('end');
 }
 
-const pieceValues = {
-	p: 1,
-	n: 3,
-	b: 3,
-	r: 5,
-	q: 9,
-	k: 1000
-}
 const moveDeltas = {
 	n: [
 		[2, 1], [2, -1],
@@ -517,7 +510,7 @@ const moveLists = [
 	document.getElementById('mobile-moves'),
 	document.getElementById('desktop-moves')
 ];
-function logMove(from, to, algebraic=null) {
+function logMove(from, to, algebraic=null, promoteTo=null) {
 	let buttonsOnly = true;
 	if (tempStatePos !== null) {
 		for (const t in state.history) {
@@ -577,6 +570,7 @@ function logMove(from, to, algebraic=null) {
 	}
 
 	syncTempState(buttonsOnly);
+	if (cfg().onmove !== null) cfg().onmove(from, to, promoteTo);
 }
 
 function simpleMove(from, to) {
@@ -588,16 +582,6 @@ function simpleMove(from, to) {
 }
 
 async function animate(ele, num) {
-	ele.addEventListener('animationstart', () => console.log('start'));
-	ele.addEventListener('animationend', () => console.log('end'));
-	ele.addEventListener('animationcancel', () => {
-		console.log('cancel');
-		console.log(
-			"parent still anim?",
-			ele.classList.contains("anim1")
-		);
-	});
-
 	ele.classList.add(`anim${num}`);
 	await wait(1000);
 	ele.classList.remove(`anim${num}`);
@@ -655,6 +639,7 @@ async function makeMove(from, to, sim=false, skip=false, autoPromote=null) {
 		algebraicDone = true;
 	}
 
+	let promoteTo = null;
 	if (!sim && pType === 'p' && to.r === (color === 'w' ? 8 : 1)) {
 		const resp = await promote(color, from, to, autoPromote);
 		if (!resp[1]) return [false, null];
@@ -662,6 +647,8 @@ async function makeMove(from, to, sim=false, skip=false, autoPromote=null) {
 		defaultMove = false;
 		defaultCapture = false;
 		capture = resp[3];
+
+		promoteTo = resp[2].toLowerCase();
 
 		if (!algebraicDone) algebraic[4] = '='+resp[2].toUpperCase();
 
@@ -765,7 +752,7 @@ async function makeMove(from, to, sim=false, skip=false, autoPromote=null) {
 		}
 	}
 
-	logMove(from, to, algebraic);
+	logMove(from, to, algebraic, promoteTo);
 
 	if (!skip) {
 		for (const [e, to] of queue) {
@@ -802,7 +789,11 @@ async function getLegalMoves(pos, forceTurn=true, exists=false) {
 	const pType = piece.toLowerCase();
 	const color = getColor(piece);
 
-	if (forceTurn && color !== state.turn) return exists ? false : [];
+	if (
+		forceTurn && (
+		!cfg().ready ||
+		color !== (cfg().color ?? state.turn)
+	)) return exists ? false : [];
 
 	let moves = [];
 	if (pType === 'p') {
@@ -958,7 +949,7 @@ async function handleMouseUp(e) {
 			if (resp[0]) state.selected = null;
 			else await makeSelection(state.selected);
 		} else {
-			playSound('illegal');
+			// playSound('illegal');
 		}
 	}
 }
