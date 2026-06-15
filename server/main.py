@@ -55,7 +55,7 @@ def make_move():
 		return {'success': False, 'error': 'Wait for your turn'}
 
 	games[game]['moves'].append(move)
-	games[game]['turn'] = 1 if games[game]['moves'] == 0 else 0
+	games[game]['turn'] = 1 if games[game]['players'][client][1] == 0 else 0
 
 	return {'success': True}
 

@@ -967,11 +967,14 @@ const promotion = {
 }
 
 async function promote(color, from, to, auto=null) {
+	console.log(color, from, to, auto);
 	const pRankNum = color === 'w' ? 8 : 1;
+
+	let pawn;
 
 	let pTo;
 	if (!auto) {
-		const pawn = getPiece(from.f, from.r);
+		pawn = getPiece(from.f, from.r);
 		pawn.hidden = true;
 
 		promotion.w.hidden = true;
