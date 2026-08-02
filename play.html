@@ -161,10 +161,36 @@
 		const SERVER = 'http://127.0.0.1:5000';
 
 		async function sync() {
+			const resp = await fetch(`${SERVER}/sync`, {
+				method: 'POST',
+				headers: {
+					'Accept': 'application/json',
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					game, last: state.halfmoves
+				})
+			})
+				.then(r => r.json())
+				.catch(console.error);
 
+			if (!resp || !resp.success) throw Error('Error Syncing')
+			if (resp.moves.length > 0) {
+				for (const move of resp.moves) {
+					await makeMove(
+						getNameSquare(move[0]),
+						getNameSquare(move[1]),
+						false,
+						false,
+						move[2] || null,
+						false
+					);
+				}
+			}
 		}
 
-		async function sendMove(from, to, promoteTo=null) {
+		async function sendMove(from, to, promoteTo=null, last=null) {
+			if (last && last <= state.halfmoves) return
 			const move = [
 				getSquareName(from.f, from.r),
 				getSquareName(to.f, to.r),
@@ -182,11 +208,12 @@
 			})
 				.then(r => r.json())
 				.then(r => {
-					if (!r.success) setTimeout(() => sendMove(from, to), 1000);
+					if (!r.success) setTimeout(() => sendMove(from, to, promoteTo, state.halfmoves), 1000);
+					throw Error('67');
 				})
 				.catch(e => {
 					console.error(e);
-					setTimeout(() => sendMove(from, to), 1000);
+					setTimeout(() => sendMove(from, to, promoteTo, state.halfmoves), 1000);
 				});
 		}
 
@@ -194,6 +221,8 @@
 		newGame();
 
 		window.chess.color = client === '1' ? 'w' : 'b';
+
+		
 
 		window.chess.ready = true;
 	</script>

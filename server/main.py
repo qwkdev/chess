@@ -1,9 +1,9 @@
-from flask import Flask, request
+import random
 from pathlib import Path
-import os
+
+from flask import Flask, request
 from flask_cors import CORS
 
-import random
 RNG = random.SystemRandom()
 
 cwd = Path(__file__).parent.resolve()
@@ -70,7 +70,7 @@ def sync():
 
 	return {
 		'success': True,
-		'turn': 0,
+		'turn': games[game]['turn'],
 		'moves': games[game]['moves'][last:],
 		'last': len(games[game]['moves'])
 	}
@@ -114,7 +114,7 @@ def join_game():
 		return {'success': False, 'error': 'Invalid Game'}
 
 	players = [p[1] for p in games[game]['players'].values()]
-	games[game]['players'][client] = [user, [p for p in [0, 1] if p not in players][0]]
+	games[game]['players'][client] = [user, next(p for p in [0, 1] if p not in players)]
 
 	if len(games[game]['players']) >= 2:
 		games[game]['start'] = True

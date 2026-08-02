@@ -510,7 +510,7 @@ const moveLists = [
 	document.getElementById('mobile-moves'),
 	document.getElementById('desktop-moves')
 ];
-function logMove(from, to, algebraic=null, promoteTo=null) {
+function logMove(from, to, algebraic=null, promoteTo=null, propegate=true) {
 	let buttonsOnly = true;
 	if (tempStatePos !== null) {
 		for (const t in state.history) {
@@ -570,7 +570,7 @@ function logMove(from, to, algebraic=null, promoteTo=null) {
 	}
 
 	syncTempState(buttonsOnly);
-	if (cfg().onmove !== null) cfg().onmove(from, to, promoteTo);
+	if (propegate && cfg().onmove !== null) cfg().onmove(from, to, promoteTo);
 }
 
 function simpleMove(from, to) {
@@ -598,7 +598,7 @@ async function showSimpleRemove(piece) {
 }
 
 // 0piece|castle 1disambiguate? 2capture? 3to_square 4promote? 5check(mate)?
-async function makeMove(from, to, sim=false, skip=false, autoPromote=null) {
+async function makeMove(from, to, sim=false, skip=false, autoPromote=null, propegate=true) {
 	let moves = [];
 	let queue = [];
 
@@ -752,7 +752,7 @@ async function makeMove(from, to, sim=false, skip=false, autoPromote=null) {
 		}
 	}
 
-	logMove(from, to, algebraic, promoteTo);
+	logMove(from, to, algebraic, promoteTo, !sim && !skip && propegate);
 
 	if (!skip) {
 		for (const [e, to] of queue) {
@@ -792,7 +792,8 @@ async function getLegalMoves(pos, forceTurn=true, exists=false) {
 	if (
 		forceTurn && (
 		!cfg().ready ||
-		color !== (cfg().color ?? state.turn)
+		color != state.turn ||
+		(cfg().color && (color != cfg().color || state.turn != cfg().color))
 	)) return exists ? false : [];
 
 	let moves = [];
@@ -1059,7 +1060,7 @@ async function loadTCN(tcn) {
 	loadFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
 	
 	for (const move of moves) {
-		await makeMove(getNameSquare(move.from), getNameSquare(move.to), false, true, move.promotion ?? null);
+		await makeMove(getNameSquare(move.from), getNameSquare(move.to), false, true, move.promotion ?? null, false);
 	}
 
 	loadBoard();
