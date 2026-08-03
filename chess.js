@@ -1,11 +1,19 @@
 const defaults = {
 	end: true,
 	onmove: null,
+	onend: null,
 	color: null,
 	ready: true
 };
 function cfg() {
 	return { ...defaults, ...(window.chess || {})};
+}
+
+function getClient() {
+	if (localStorage.getItem('client')) return localStorage.getItem('client');
+	let client = String.fromCharCode(...Array.from({ length: 6 }, () => Math.floor(Math.random()*26 + 65)));
+	client = `${client}-${Date.now()}`;
+	localStorage.setItem('client', client);
 }
 
 async function wait(ms) {
@@ -372,12 +380,12 @@ const winConditions = [
 	[null, 'Agreement']
 ]
 
-const resultCondition = document.getElementById('condition');
 const results = {
-	wrapper: document.getElementById('result-wrapper'),
-	winner: resultCondition.querySelector('h1'),
-	reason: resultCondition.querySelector('h2')
-}
+	wrapper: document.getElementById('result'),
+};
+results.condition = results.wrapper.querySelector('.condition');
+results.winner = results.condition.querySelector('h1');
+results.reason = results.condition.querySelector('h2');
 
 function endGame(code) {
 	if (state.end !== null) return;
@@ -392,6 +400,8 @@ async function checkGameEnded() {
 
 	await wait(200);
 	playSound('end');
+
+	if (cfg().onend !== null) cfg().onend();
 }
 
 const moveDeltas = {

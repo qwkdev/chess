@@ -277,53 +277,7 @@ body {
 	height: calc(15 * var(--u));
 }
 
-#menu {
-	position: absolute;
-	top: calc(1 * var(--u));
-	left: calc(1 * var(--u));
-
-	display: flex;
-	gap: calc(1 * var(--u));
-
-	z-index: 999;
-}
-
-#logo {
-	width: max-content;
-	--h: calc(6 * var(--u));
-
-	display: flex;
-	align-items: center;
-	justify-content: center;
-
-	padding: 0 calc(3 * var(--u));
-
-	h1 {
-		margin: 0;
-		color: var(--text);
-		font-family: Arial;
-		font-weight: 700;
-		font-size: calc(2.5 * var(--u));
-	}
-}
-
-#links {
-	width: max-content;
-	--h: calc(6 * var(--u));
-
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: calc(3 * var(--u));
-
-	padding: 0 calc(3 * var(--u));
-
-	a {
-		font-size: calc(2 * var(--u));
-	}
-}
-
-.glass {
+.glass, #menu div {
 	--h: 100px;
 	height: var(--h);
 	box-sizing: border-box;
@@ -340,6 +294,46 @@ body {
 		box-shadow: inset 0 calc(.8 * var(--h)) calc(.4 * var(--h)) calc(-.4 * var(--h)) rgba(245, 245, 255, 0.08);
 		border-top-color: rgba(255, 255, 255, 0.15);
 		transform: scale(1.02);
+	}
+}
+
+#menu {
+	position: absolute;
+	top: calc(1 * var(--u));
+	left: calc(1 * var(--u));
+
+	display: flex;
+	gap: calc(1 * var(--u));
+
+	z-index: 999;
+
+	div {
+		width: max-content;
+		--h: calc(6 * var(--u));
+
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: calc(3 * var(--u));
+
+		padding: 0 calc(3 * var(--u));
+
+		h1, p {
+			margin: 0;
+			color: var(--text);
+			font-family: Arial;
+		}
+		h1 {
+			font-weight: 700;
+			font-size: calc(2.5 * var(--u));
+		}
+		p {
+			font-weight: 500;
+			font-size: calc(2 * var(--u));
+		}
+		a {
+			font-size: calc(2 * var(--u));
+		}
 	}
 }
 
@@ -473,7 +467,7 @@ body {
 	}
 }
 
-#result-wrapper {
+.wrapper {
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -482,7 +476,7 @@ body {
 
 	background: var(--modal-shadow);
 
-	#result {
+	.modal {
 		position: absolute;
 		top: 50%;
 		left: 50%;
@@ -493,7 +487,7 @@ body {
 
 		border-radius: calc(2 * var(--u));
 
-		#condition {
+		.condition {
 			border-radius: calc(2 * var(--u));
 
 			background: radial-gradient(
@@ -523,7 +517,7 @@ body {
 				font-weight: 500;
 			}
 		}
-		#options {
+		.options {
 			display: grid;
 			grid-template-columns: 1fr 1fr;
 			gap: calc(.5 * var(--u));
@@ -537,7 +531,7 @@ body {
 				--l: calc(0.37/0.57);
 			}
 		}
-		#watermark {
+		.watermark {
 			width: 100%;
 			text-align: center;
 			margin: 0;
@@ -593,9 +587,22 @@ body {
 	#desktop {
 		display: flex;
 	}
+	#menu {
+		flex-direction: column;
+	}
 	#debug2 {
 		left: initial;
 		right: 1%;
 	}
-
 }
+@media only screen and (min-aspect-ratio: 5/7) and (max-aspect-ratio: 1/1) {
+	:root {
+		--piece: round(calc(80vw / 8), var(--px));
+	}
+}
+@media only screen and (min-aspect-ratio: 1/1) and (max-aspect-ratio: 8/5) {
+	:root {
+		--piece: round(calc(50vw / 8), var(--px));
+	}
+}
+/* TODO: split 2nd into 2 more, fix first idk */

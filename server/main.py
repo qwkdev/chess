@@ -26,10 +26,10 @@ games = {
 
 def genCode() -> str:
 	return ''.join([RNG.choice(
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ' # +
         # 'abcdefghijklmnopqrstuvwxyz' +
-        '0123456789'
-    ) for _ in range()])
+        # '0123456789'
+    ) for _ in range(4)])
 
 @app.route('/')
 def home():
@@ -57,7 +57,7 @@ def make_move():
 	games[game]['moves'].append(move)
 	games[game]['turn'] = 1 if games[game]['players'][client][1] == 0 else 0
 
-	return {'success': True}
+	return {'success': True, 'last': len(games[game]['moves'])}
 
 @app.route('/sync', methods=['POST'])
 def sync():
@@ -68,11 +68,13 @@ def sync():
 	if game not in games:
 		return {'success': False, 'error': 'Invalid Game'}
 
+	rlast = len(games[game]['moves'])
 	return {
 		'success': True,
 		'turn': games[game]['turn'],
 		'moves': games[game]['moves'][last:],
-		'last': len(games[game]['moves'])
+		'last': rlast,
+		'fen': games[game]['moves'][-1][3] if rlast > 0 else None
 	}
 
 @app.route('/lobby', methods=['POST'])
@@ -101,23 +103,31 @@ def join_game():
 		while newcode in games:
 			newcode = genCode()
 
+		pdata = [user, random.choice([0, 1])]
 		games[newcode] = {
 			'moves': [],
 			'start': False,
-			'players': {client: [user, random.choice([0, 1])]},
+			'players': {client: pdata},
 			'turn': 0
 		}
 
-		return {'success': True, 'game': newcode}
+		return {'success': True, 'game': newcode, 'data': pdata}
 
-	if game not in games or games[game]['start']:
+	if game not in games:
+		return {'success': False, 'error': 'Invalid Game'}
+	if client in games[game]['players']:
+		return {'success': True, 'data': games[game]['players'][client]}
+	if games[game]['start']:
 		return {'success': False, 'error': 'Invalid Game'}
 
 	players = [p[1] for p in games[game]['players'].values()]
-	games[game]['players'][client] = [user, next(p for p in [0, 1] if p not in players)]
+	pdata = [user, next(p for p in [0, 1] if p not in players)]
+	games[game]['players'][client] = pdata
 
 	if len(games[game]['players']) >= 2:
 		games[game]['start'] = True
+
+	return {'success': True, 'data': pdata}
 
 #####
 

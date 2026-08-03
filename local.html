@@ -22,8 +22,8 @@
 	</svg>
 
 	<div id="menu">
-		<div id="logo" class="glass"><h1>qchess.pro</h1></div>
-		<div id="links" class="glass">
+		<div><h1>qchess.pro</h1></div>
+		<div>
 			<a class="underlined" onclick="newGame()">New Game<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
 			<!-- <a class="underlined" href="">More Coming Soon...<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a> -->
 		</div>
@@ -134,17 +134,17 @@
 		</div>
 	</div>
 
-	<div id="result-wrapper" hidden>
-		<div id="result">
-			<div id="condition">
+	<div class="wrapper" id="result" hidden>
+		<div class="modal">
+			<div class="condition">
 				<h1>White Wins</h1>
 				<h2>By Checkmate</h2>
 			</div>
-			<div id="options">
+			<div class="options">
 				<button class="btn">Coming Soon</button>
-				<button class="btn" onclick="newGame()">New Game</button>
+				<button class="btn" onclick="startNew()">New Game</button>
 			</div>
-			<p id="watermark">qchess.pro</p>
+			<p class="watermark">qchess.pro</p>
 		</div>
 	</div>
 

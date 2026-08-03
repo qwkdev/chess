@@ -22,10 +22,10 @@
 	</svg>
 
 	<div id="menu">
-		<div id="logo" class="glass"><h1>qchess.pro</h1></div>
-		<div id="links" class="glass">
-			<a class="underlined" onclick="newGame()">New Game<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
-			<!-- <a class="underlined" href="">More Coming Soon...<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a> -->
+		<div><h1>qchess.pro</h1></div>
+		<div>
+			<!-- <a class="underlined" onclick="newGame()">New Game<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a> -->
+			<a class="underlined" href="">More Coming Soon...<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
 		</div>
 	</div>
 
@@ -134,17 +134,31 @@
 		</div>
 	</div>
 
-	<div id="result-wrapper" hidden>
-		<div id="result">
-			<div id="condition">
+	<div class="wrapper" id="result" hidden>
+		<div class="modal">
+			<div class="condition">
 				<h1>White Wins</h1>
 				<h2>By Checkmate</h2>
 			</div>
-			<div id="options">
+			<div class="options">
 				<button class="btn">Coming Soon</button>
-				<button class="btn" onclick="newGame()">New Game</button>
+				<button class="btn" onclick="startNew()">New Game</button>
 			</div>
-			<p id="watermark">qchess.pro</p>
+			<p class="watermark">qchess.pro</p>
+		</div>
+	</div>
+
+	<div class="wrapper" id="create" hidden>
+		<div class="modal">
+			<div class="condition">
+				<h1>New Game</h1>
+				<h2>Classic Online</h2>
+			</div>
+			<div class="options">
+				<button class="btn" onclick="init()">Create Game</button>
+				<button class="btn" onclick="joinGame()">Join Game</button>
+			</div>
+			<p class="watermark">qchess.pro</p>
 		</div>
 	</div>
 
@@ -155,11 +169,13 @@
 	</script>
 	<script src="/chess.js"></script>
 	<script>
-		const game = 'test';
-		const client = window.location.search.slice(1);
+		let game = window.location.search.slice(1).toUpperCase();
+		const client = getClient();
+		let last = 0;
 
 		const SERVER = 'http://127.0.0.1:5000';
 
+		let syncloop = -1;
 		async function sync() {
 			const resp = await fetch(`${SERVER}/sync`, {
 				method: 'POST',
@@ -174,7 +190,14 @@
 				.then(r => r.json())
 				.catch(console.error);
 
-			if (!resp || !resp.success) throw Error('Error Syncing')
+			if (!resp || !resp.success) throw Error('Error Syncing');
+
+			if (resp.last < state.halfmoves && resp.fen) {
+				loadFEN(resp.fen);
+				loadBoard();
+				results.wrapper.hidden = true;
+			}
+
 			if (resp.moves.length > 0) {
 				for (const move of resp.moves) {
 					await makeMove(
@@ -186,15 +209,31 @@
 						false
 					);
 				}
+				last = resp.last;
 			}
+
+			if (syncloop !== null)
+				syncloop = setTimeout(sync, 500);
+		}
+		function startSync() {
+			syncloop = -1;
+			sync();
+		}
+		function stopSync() {
+			clearTimeout(syncloop);
+			syncloop = null;
 		}
 
-		async function sendMove(from, to, promoteTo=null, last=null) {
-			if (last && last <= state.halfmoves) return
+		async function sendMove(from, to, promoteTo=null) {
+			if (last >= state.halfmoves) return;
+
+			stopSync();
+
 			const move = [
 				getSquareName(from.f, from.r),
 				getSquareName(to.f, to.r),
-				promoteTo
+				promoteTo,
+				getFEN()
 			];
 			fetch(`${SERVER}/move`, {
 				method: 'POST',
@@ -208,23 +247,68 @@
 			})
 				.then(r => r.json())
 				.then(r => {
-					if (!r.success) setTimeout(() => sendMove(from, to, promoteTo, state.halfmoves), 1000);
-					throw Error('67');
+					if (!r.success) setTimeout(() => sendMove(from, to, promoteTo), 500);
+					else {
+						last = r.last;
+						startSync();
+					}
 				})
 				.catch(e => {
 					console.error(e);
-					setTimeout(() => sendMove(from, to, promoteTo, state.halfmoves), 1000);
+					setTimeout(() => sendMove(from, to, promoteTo), 500);
 				});
 		}
 
+		function startNew() {
+			window.location.search = '';
+		}
+
 		window.chess.onmove = sendMove;
+		window.chess.onend = () => stopSync();
 		newGame();
 
-		window.chess.color = client === '1' ? 'w' : 'b';
+		const createModal = document.getElementById('create');
+		async function init() {
+			createModal.hidden = true;
+			const resp = await fetch(`${SERVER}/join`, {
+				method: 'POST',
+				headers: {
+					'Accept': 'application/json',
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ game: game || null, client })
+			})
+				.then(r => r.json())
+				.catch(e => {
+					console.error(e);
+					window.location.search = '';
+				});
 
-		
+			if (resp.success) {
+				if (resp.game) {
+					game = resp.game;
+					history.pushState({}, '', window.location.pathname + `?${resp.game}`);
+				}
+				window.chess.color = resp.data[1] === 0 ? 'w' : 'b';
 
-		window.chess.ready = true;
+				const gameInfo = document.createElement('div');
+				gameInfo.innerHTML = `<p>Code: ${game}</p><p>${resp.data[1] === 0 ? 'White' : 'Black'}</p>`;
+				document.getElementById('menu').appendChild(gameInfo);
+
+				startSync();
+				window.chess.ready = true;
+			} else {
+				window.location.search = '';
+			}
+		}
+
+		function joinGame() {
+			game = prompt('Enter code:').toUpperCase();
+			if (game) init();
+		}
+
+		if (!game) createModal.hidden = false;
+		else init();
 	</script>
 </body>
 </html>
