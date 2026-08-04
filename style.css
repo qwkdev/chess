@@ -595,14 +595,29 @@ body {
 		right: 1%;
 	}
 }
-@media only screen and (min-aspect-ratio: 5/7) and (max-aspect-ratio: 1/1) {
+@media only screen and (min-aspect-ratio: 5/7) and (max-aspect-ratio: 8/9) {
 	:root {
 		--piece: round(calc(80vw / 8), var(--px));
 	}
 }
-@media only screen and (min-aspect-ratio: 1/1) and (max-aspect-ratio: 8/5) {
+@media only screen and (min-aspect-ratio: 8/9) and (max-aspect-ratio: 1/1) {
+	:root {
+		--piece: round(calc(70vw / 8), var(--px));
+	}
+}
+@media only screen and (min-aspect-ratio: 1/1) and (max-aspect-ratio: 6/5) {
+	:root {
+		--side-width: 25vh;
+		--piece: round(calc(50vw / 8), var(--px));
+	}
+}
+@media only screen and (min-aspect-ratio: 6/5) and (max-aspect-ratio: 7/5) {
 	:root {
 		--piece: round(calc(50vw / 8), var(--px));
 	}
 }
-/* TODO: split 2nd into 2 more, fix first idk */
+@media only screen and (min-aspect-ratio: 7/5) and (max-aspect-ratio: 8/5) {
+	:root {
+		--piece: round(calc(55vw / 8), var(--px));
+	}
+}
