@@ -1,5 +1,6 @@
 const defaults = {
 	end: true,
+	timeline: true,
 	onmove: null,
 	onend: null,
 	color: null,
@@ -22,8 +23,6 @@ async function wait(ms) {
 
 // TODO: Click on algebraic
 // TODO: Save game state
-// TODO: Fix inbetween desktop/mobile
-// TODO: Unify as one qChess API (for analysis, online, fairy, etc)
 
 const boardEl = document.getElementById('board');
 let state = {
@@ -195,6 +194,10 @@ const moveHistoryButtons = [
 	document.getElementById('dh-end')
 ];
 function syncTempState(buttonsOnly=false, sound=false) {
+	if (!cfg().timeline) {
+		tempStatePos = null;
+		return;
+	}
 	if (tempStatePos >= state.history.state.length - 1) tempStatePos = null;
 	if (tempStatePos < -1) {
 		tempStatePos = -1;
@@ -251,8 +254,9 @@ function syncTempState(buttonsOnly=false, sound=false) {
 }
 
 function moveHistory(delta) {
-	let sound = true;
+	if (!cfg().timeline) return;
 
+	let sound = true;
 	if (delta === 'next' || delta === 'end') {
 		if (tempStatePos === null) return;
 		if (delta === 'next') tempStatePos++;
@@ -418,7 +422,6 @@ const moveDeltas = {
 }
 
 function checkCheck(board, color) {
-	const st = performance.now();
 	const kingPos = searchBoard(board, color === 'w' ? 'K' : 'k', true);
 	for (const pType of ['b', 'r']) {
 		for (const [df, dr] of moveDeltas[pType]) {
@@ -467,7 +470,7 @@ async function checkLegal(color, board=gameBoard) {
 	for (let r = 0; r < 8; r++) {
 		const rank = board[r];
 		for (let f = 0; f < 8; f++) {
-			const piece = board[r][f];
+			const piece = rank[f];
 			if (getColor(piece) !== color) continue;
 
 			const legal = await getLegalMoves({ f: f+1, r: 8-r }, false, true);
@@ -935,7 +938,7 @@ async function handleClick(e) {
 		else state.selected = null;
 	} else if (state.selected) {
 		if (await legalMove(state.selected, pos)) {
-			const resp = await makeMove(state.selected, pos);
+			await makeMove(state.selected, pos);
 		}
 		state.selected = null;
 	}
@@ -949,7 +952,6 @@ async function handleMouseUp(e) {
 
 	const square = e.target;
 	const pos = getPos(square);
-	const piece = getPiece(pos.f, pos.r);
 	
 	getPiece(state.selected.f, state.selected.r).dataset.drag = '0';
 
@@ -978,26 +980,21 @@ const promotion = {
 }
 
 async function promote(color, from, to, auto=null) {
-	console.log(color, from, to, auto);
-	const pRankNum = color === 'w' ? 8 : 1;
-
-	let pawn;
+	let pawn = getPiece(from.f, from.r);
+	pawn.hidden = true;
 
 	let pTo;
 	if (!auto) {
-		pawn = getPiece(from.f, from.r);
-		pawn.hidden = true;
-
 		promotion.w.hidden = true;
 		promotion.b.hidden = true;
 		
-		const pDialog = promotion[color === 'w' ? 'w' : 'b'];
+		const pDialog = promotion[color];
 		pDialog.style.setProperty('--f', to.f);
 		pDialog.hidden = false;
 	
 		pTo = await new Promise(res => {
 			setTimeout(() => {
-				document.addEventListener('click', e => {
+				document.addEventListener('mousedown', e => {
 					if (e.target.classList.contains('promote-option')) {
 						res(e.target.dataset.value);
 					} else res(null);
@@ -1023,15 +1020,13 @@ async function promote(color, from, to, auto=null) {
 	gameBoard[8 - to.r][to.f - 1] = piece;
 	gameBoard[8 - from.r][from.f - 1] = '';
 	
-	if (!auto) {
-		pawn.style.setProperty('--f', to.f);
-		pawn.style.setProperty('--r', to.r);
-		pawn.querySelector('img').src = `/img/150/${pTo}.png`;
-		
-		pawn.hidden = false;
-		promotion.w.hidden = true;
-		promotion.b.hidden = true;
-	}
+	pawn.style.setProperty('--f', to.f);
+	pawn.style.setProperty('--r', to.r);
+	pawn.querySelector('img').src = `/img/150/${pTo}.png`;
+
+	pawn.hidden = false;
+	promotion.w.hidden = true;
+	promotion.b.hidden = true;
 
 	return [queue, true, pTo[1], capture];
 }

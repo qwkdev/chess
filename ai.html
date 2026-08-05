@@ -24,7 +24,7 @@
 	<div id="menu">
 		<div><h1>qchess.pro</h1></div>
 		<div>
-			<a class="underlined" onclick="newGame()">New Game<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
+			<a class="underlined" onclick="startNew()">New Game<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
 			<!-- <a class="underlined" href="">More Coming Soon...<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a> -->
 		</div>
 	</div>
@@ -74,15 +74,53 @@
 			</div>
 			<div class="options">
 				<button class="btn">Coming Soon</button>
-				<button class="btn" onclick="startNew()">New Game</button>
+				<button class="btn" onclick="newGame()">New Game</button>
 			</div>
 			<p class="watermark">qchess.pro</p>
 		</div>
 	</div>
 
-	<script src="/chess.js"></script>
+	<div class="wrapper" id="create" hidden>
+		<div class="modal">
+			<div class="condition">
+				<h1>New Game</h1>
+				<h2>Classic Online</h2>
+			</div>
+			<div class="options">
+				<button class="btn" onclick="init()">Create Game</button>
+				<button class="btn" onclick="joinGame()">Join Game</button>
+			</div>
+			<p class="watermark">qchess.pro</p>
+		</div>
+	</div>
+
 	<script>
+		window.chess = {
+			ready: false,
+			// timeline: false
+		};
+	</script>
+	<script src="/chess.js"></script>
+	<!-- https://github.com/nmrugg/stockfish.js/ -->
+	<script>
+		const params = new URLSearchParams();
+		window.chess.color = ['w', 'b'].includes(params.get('c')) ? params.get('c') : (Math.random() < .5 ? 'w' : 'b');
+		const rating = 
+
+		async function sendMove(from, to, promoteTo=null) {
+			const move = [
+				getSquareName(from.f, from.r),
+				getSquareName(to.f, to.r),
+				promoteTo,
+				getFEN()
+			];
+
+			// save fen before calc, and check is same before moving
+		}
+		window.chess.onmove = sendMove;
 		newGame();
+		
+		window.chess.ready = true;
 	</script>
 </body>
 </html>

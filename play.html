@@ -24,8 +24,8 @@
 	<div id="menu">
 		<div><h1>qchess.pro</h1></div>
 		<div>
-			<!-- <a class="underlined" onclick="newGame()">New Game<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a> -->
-			<a class="underlined" href="">More Coming Soon...<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
+			<a class="underlined" onclick="startNew()">New Game<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
+			<!-- <a class="underlined" href="">More Coming Soon...<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a> -->
 		</div>
 	</div>
 
@@ -53,75 +53,7 @@
 				<img class="promote-option" data-value="bq" src="/img/150/bq.png">
 			</div>
 		</div>
-		<div id="squares">
-			<div id="square-18"></div>
-			<div id="square-28"></div>
-			<div id="square-38"></div>
-			<div id="square-48"></div>
-			<div id="square-58"></div>
-			<div id="square-68"></div>
-			<div id="square-78"></div>
-			<div id="square-88"></div>
-			<div id="square-17"></div>
-			<div id="square-27"></div>
-			<div id="square-37"></div>
-			<div id="square-47"></div>
-			<div id="square-57"></div>
-			<div id="square-67"></div>
-			<div id="square-77"></div>
-			<div id="square-87"></div>
-			<div id="square-16"></div>
-			<div id="square-26"></div>
-			<div id="square-36"></div>
-			<div id="square-46"></div>
-			<div id="square-56"></div>
-			<div id="square-66"></div>
-			<div id="square-76"></div>
-			<div id="square-86"></div>
-			<div id="square-15"></div>
-			<div id="square-25"></div>
-			<div id="square-35"></div>
-			<div id="square-45"></div>
-			<div id="square-55"></div>
-			<div id="square-65"></div>
-			<div id="square-75"></div>
-			<div id="square-85"></div>
-			<div id="square-14"></div>
-			<div id="square-24"></div>
-			<div id="square-34"></div>
-			<div id="square-44"></div>
-			<div id="square-54"></div>
-			<div id="square-64"></div>
-			<div id="square-74"></div>
-			<div id="square-84"></div>
-			<div id="square-13"></div>
-			<div id="square-23"></div>
-			<div id="square-33"></div>
-			<div id="square-43"></div>
-			<div id="square-53"></div>
-			<div id="square-63"></div>
-			<div id="square-73"></div>
-			<div id="square-83"></div>
-			<div id="square-12"></div>
-			<div id="square-22"></div>
-			<div id="square-32"></div>
-			<div id="square-42"></div>
-			<div id="square-52"></div>
-			<div id="square-62"></div>
-			<div id="square-72"></div>
-			<div id="square-82"></div>
-			<div id="square-11"></div>
-			<div id="square-21"></div>
-			<div id="square-31"></div>
-			<div id="square-41"></div>
-			<div id="square-51"></div>
-			<div id="square-61"></div>
-			<div id="square-71"></div>
-			<div id="square-81"></div>
-		</div>
-		<!-- <div class="piece" style="--f: 5; --r: 2;">
-			<img src="/img/150/wp.png">
-		</div> -->
+		<div id="squares"><div id="square-18"></div><div id="square-28"></div><div id="square-38"></div><div id="square-48"></div><div id="square-58"></div><div id="square-68"></div><div id="square-78"></div><div id="square-88"></div><div id="square-17"></div><div id="square-27"></div><div id="square-37"></div><div id="square-47"></div><div id="square-57"></div><div id="square-67"></div><div id="square-77"></div><div id="square-87"></div><div id="square-16"></div><div id="square-26"></div><div id="square-36"></div><div id="square-46"></div><div id="square-56"></div><div id="square-66"></div><div id="square-76"></div><div id="square-86"></div><div id="square-15"></div><div id="square-25"></div><div id="square-35"></div><div id="square-45"></div><div id="square-55"></div><div id="square-65"></div><div id="square-75"></div><div id="square-85"></div><div id="square-14"></div><div id="square-24"></div><div id="square-34"></div><div id="square-44"></div><div id="square-54"></div><div id="square-64"></div><div id="square-74"></div><div id="square-84"></div><div id="square-13"></div><div id="square-23"></div><div id="square-33"></div><div id="square-43"></div><div id="square-53"></div><div id="square-63"></div><div id="square-73"></div><div id="square-83"></div><div id="square-12"></div><div id="square-22"></div><div id="square-32"></div><div id="square-42"></div><div id="square-52"></div><div id="square-62"></div><div id="square-72"></div><div id="square-82"></div><div id="square-11"></div><div id="square-21"></div><div id="square-31"></div><div id="square-41"></div><div id="square-51"></div><div id="square-61"></div><div id="square-71"></div><div id="square-81"></div></div>
 	</div>
 
 	<div id="desktop">
@@ -164,8 +96,9 @@
 
 	<script>
 		window.chess = {
-			ready: false
-		}
+			ready: false,
+			timeline: false
+		};
 	</script>
 	<script src="/chess.js"></script>
 	<script>
@@ -212,7 +145,7 @@
 				last = resp.last;
 			}
 
-			if (syncloop !== null)
+			if (syncloop !== null && (!window.chess.color || state.turn !== window.chess.color))
 				syncloop = setTimeout(sync, 500);
 		}
 		function startSync() {
@@ -285,10 +218,9 @@
 				});
 
 			if (resp.success) {
-				if (resp.game) {
-					game = resp.game;
-					history.pushState({}, '', window.location.pathname + `?${resp.game}`);
-				}
+				if (resp.game) game = resp.game;
+				
+				history.replaceState({}, '', window.location.pathname + `?${game}`);
 				window.chess.color = resp.data[1] === 0 ? 'w' : 'b';
 
 				const gameInfo = document.createElement('div');
