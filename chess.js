@@ -928,7 +928,6 @@ async function makeSelection(pos) {
 async function handleClick(e) {
 	const square = e.currentTarget;
 	const pos = getPos(square);
-	const boardPiece = getBoard(pos.f, pos.r);
 	const piece = getPiece(pos.f, pos.r);
 	if (piece) piece.dataset.drag = '2';
 

@@ -138,12 +138,21 @@ body {
 	box-sizing: border-box;
 }
 
+#mobile-moves-wrapper {
+	position: absolute;
+	bottom: 100%;
+	right: 0;
+
+	width: 100%;
+	height: calc(4 * var(--u));
+	overflow: hidden;
+}
 
 #mobile-moves {
 	z-index: 999;
 
 	position: absolute;
-	bottom: 100%;
+	bottom: 0;
 	right: 0;
 
 	display: flex;
@@ -153,7 +162,7 @@ body {
 
 	width: max-content;
 	min-width: 100%;
-	height: calc(4 * var(--u));
+	height: 100%;
 	padding: calc(.5 * var(--u));
 	padding-bottom: calc(.6 * var(--u));
 	gap: calc(.5 * var(--u));
@@ -472,18 +481,39 @@ body {
 	}
 }
 
+/* todo: mobilemoves noclipping */
+
 #board[data-flipped="1"] {
-	transform: translate(-50%, -50%) rotate(180deg) !important;
+	transform: translate(-50%, -50%) rotate(180deg);
 
 	.piece {
 		transform: translate(
 			calc((var(--f) - 1) * var(--piece)),
 			calc((8 - var(--r)) * var(--piece))
-		) rotate(180deg) !important;
-	}
+		) rotate(180deg);
 
-	#white-promotion { top: auto; bottom: 0; }
-	#black-promotion { bottom: auto; top: 0; }
+		&[data-drag="1"] {
+			transform: translate(
+				calc((var(--piece) * 8) - var(--x) - 50%),
+				calc((var(--piece) * 8) - var(--y) - 50%)
+			) rotate(180deg);
+		}
+	}
+	.promotion img, #mobile-moves, #mobile-buttons {
+		transform: rotate(180deg);
+	}
+	#mobile-moves-wrapper {
+		bottom: auto;
+		top: 100%;
+	}
+	#mobile-moves {
+		right: auto;
+		left: 0;
+	}
+	#mobile-buttons {
+		top: auto;
+		bottom: 100%;
+	}
 }
 
 .wrapper {
