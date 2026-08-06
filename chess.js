@@ -1090,7 +1090,7 @@ let engine;
 let engineReady = false;
 let engineQueue = [];
 function loadStockfish() {
-	engine = new Worker('engine/stockfish-18-asm.js');
+	engine = new Worker('engine/stockfish-18-lite.js');
 	
 	engine.onmessage = e => {
 		if (e.data === 'readyok') {
