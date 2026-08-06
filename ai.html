@@ -135,7 +135,7 @@
 			await playEngine(moveTime);
 		}
 		window.chess.onEngineReady = () => {
-			window.chess.ready = true;
+			ready();
 			gameInfo.innerHTML = `<p>Stockfish (${
 				window.chess.engineElo || 'Max '
 			} Elo ${

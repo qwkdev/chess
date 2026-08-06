@@ -8,6 +8,7 @@ const defaults = {
 	onend: null,
 	onnew: null,
 	color: null,
+	flipBoard: true,
 	ready: true
 };
 function cfg() {
@@ -1146,6 +1147,16 @@ async function playEngine(time=1000, propegate=false) {
 	);
 }
 
+//
+
+function ready() {
+	if (cfg().color && cfg().flipBoard) {
+		if (cfg().color !== 'w') {
+			boardEl.dataset.flipped = '1';
+		}
+	}
+	window.chess.ready = true;
+}
 
 //
 
