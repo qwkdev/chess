@@ -24,7 +24,7 @@
 	<div id="menu">
 		<div><h1>qchess.pro</h1></div>
 		<div>
-			<a class="underlined" onclick="startNew()">New Game<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
+			<a class="underlined" onclick="newGame()">New Game<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
 			<!-- <a class="underlined" href="">More Coming Soon...<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a> -->
 		</div>
 	</div>
@@ -96,31 +96,56 @@
 
 	<script>
 		window.chess = {
-			ready: false,
-			// timeline: false
+			ready: false
 		};
 	</script>
 	<script src="/chess.js"></script>
-	<!-- https://github.com/nmrugg/stockfish.js/ -->
 	<script>
-		const params = new URLSearchParams();
-		window.chess.color = ['w', 'b'].includes(params.get('c')) ? params.get('c') : (Math.random() < .5 ? 'w' : 'b');
-		const rating = 
+		const params = new URLSearchParams(window.location.search);		
+		const rating = parseInt(params.get('r')) || null;
+		if (rating && rating > 0) window.chess.engineElo = rating;
 
-		async function sendMove(from, to, promoteTo=null) {
-			const move = [
-				getSquareName(from.f, from.r),
-				getSquareName(to.f, to.r),
-				promoteTo,
-				getFEN()
-			];
+		let moveTime = parseInt(params.get('t')) || null;
+		if (!moveTime || moveTime <= 0) moveTime = 1000;
 
-			// save fen before calc, and check is same before moving
+		function round(n, p) {
+			return Math.round(n*Math.pow(10, p))/Math.pow(10, p);
 		}
-		window.chess.onmove = sendMove;
+
+		window.chess.onnew = () => {
+			window.chess.color = ['w', 'b'].includes(params.get('c')) ? params.get('c') : (Math.random() < .5 ? 'w' : 'b');
+			if (engineReady) {
+				document.getElementById('gameinfo').innerHTML = `<p>Stockfish (${
+					window.chess.engineElo || 'Max '
+				} Elo ${
+					round(moveTime/1000, 1)
+				}s)</p><p>${
+					window.chess.color === 'w' ? 'White' : 'Black'
+				}</p>`;
+				if (window.chess.color !== 'w') playEngine(moveTime);
+			}
+		};
 		newGame();
-		
-		window.chess.ready = true;
+
+		window.chess.onmove = async _ => {
+			await playEngine(moveTime);
+		}
+		window.chess.onEngineReady = () => {
+			window.chess.ready = true;
+			const gameInfo = document.createElement('div');
+			gameInfo.id = 'gameinfo';
+			gameInfo.style.setProperty('--n', 2);
+			gameInfo.innerHTML = `<p>Stockfish (${
+				window.chess.engineElo || 'Max '
+			} Elo ${
+				round(moveTime/1000, 1)
+			}s)</p><p>${
+				window.chess.color === 'w' ? 'White' : 'Black'
+			}</p>`;
+			document.getElementById('menu').appendChild(gameInfo);
+			if (window.chess.color !== 'w') playEngine(moveTime);
+		};
+		loadStockfish();
 	</script>
 </body>
 </html>

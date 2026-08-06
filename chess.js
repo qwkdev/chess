@@ -1,8 +1,12 @@
 const defaults = {
 	end: true,
 	timeline: true,
+	engine: null,
+	engineElo: null,
+	onEngineReady: null,
 	onmove: null,
 	onend: null,
+	onnew: null,
 	color: null,
 	ready: true
 };
@@ -23,6 +27,7 @@ async function wait(ms) {
 
 // TODO: Click on algebraic
 // TODO: Save game state
+// TODO: Allow Stockfish to ponder between moves
 
 const boardEl = document.getElementById('board');
 let state = {
@@ -1034,10 +1039,16 @@ async function promote(color, from, to, auto=null) {
 //
 
 function newGame() {
+	if (engineReady) {
+		engine.postMessage('ucinewgame');
+		engine.postMessage('position startpos');
+	}
 	loadFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
 	loadBoard();
 	results.wrapper.hidden = true;
 	playSound('start');
+
+	if (cfg().onnew) cfg().onnew();
 }
 
 var tcnKey = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?{~}(^)[_]@#$,./&-*++=';
@@ -1072,6 +1083,69 @@ async function loadTCN(tcn) {
 	results.wrapper.hidden = true;
 	playSound('start');
 }
+
+//
+
+let engine;
+let engineReady = false;
+let engineQueue = [];
+function loadStockfish() {
+	engine = new Worker('engine/stockfish-18-asm.js');
+	
+	engine.onmessage = e => {
+		if (e.data === 'readyok') {
+			engineReady = true;
+			engine.postMessage('ucinewgame');
+			engine.postMessage('position startpos');
+			if (cfg().onEngineReady) cfg().onEngineReady();
+		} else {
+			let rm = [];
+			for (const waiter of engineQueue) {
+				if (e.data.startsWith(waiter[0])) {
+					waiter[1](e.data);
+					rm.push(waiter[0]);
+				}
+			}
+			engineQueue = engineQueue.filter(i => !rm.includes(i[0]));
+		}
+	};
+
+	engine.postMessage('uci');
+	if (cfg().engineElo) {
+		engine.postMessage('setoption name UCI_LimitStrength value true');
+		engine.postMessage(`setoption name UCI_Elo value ${cfg().engineElo}`);
+	}
+	engine.postMessage('isready');
+}
+function waitForEngine(prefix) {
+	return new Promise(res => engineQueue.push([prefix, res]));
+}
+async function getEngineMove(time=1000, fen=null) {
+	if (!engineReady) return;
+	engine.postMessage(`position fen ${fen || getFEN()}`);
+	engine.postMessage(`go movetime ${time}`);
+	const moveMsg = await waitForEngine('bestmove');
+	const rawMove = moveMsg.split(' ')[1];
+	return [
+		rawMove.slice(0, 2),
+		rawMove.slice(2, 4),
+		rawMove[4] || null
+	];
+}
+async function playEngine(time=1000, propegate=false) {
+	const fen = getFEN();
+	const move = await getEngineMove(time, fen);
+	if (getFEN() !== fen) return;
+	await makeMove(
+		getNameSquare(move[0]),
+		getNameSquare(move[1]),
+		false,
+		false,
+		move[2] || null,
+		propegate
+	);
+}
+
 
 //
 

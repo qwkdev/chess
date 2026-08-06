@@ -224,6 +224,7 @@
 				window.chess.color = resp.data[1] === 0 ? 'w' : 'b';
 
 				const gameInfo = document.createElement('div');
+				gameInfo.style.setProperty('--n', 2);
 				gameInfo.innerHTML = `<p>Code: ${game}</p><p>${resp.data[1] === 0 ? 'White' : 'Black'}</p>`;
 				document.getElementById('menu').appendChild(gameInfo);
 

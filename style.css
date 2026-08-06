@@ -310,6 +310,7 @@ body {
 	div {
 		width: max-content;
 		--h: calc(6 * var(--u));
+		--n: 1;
 
 		display: flex;
 		align-items: center;
@@ -589,6 +590,11 @@ body {
 	}
 	#menu {
 		flex-direction: column;
+	}
+	#menu div {
+		--h: calc(3 * var(--u) * (var(--n) + 1));
+		flex-direction: column;
+		gap: calc(1 * var(--u));
 	}
 	#debug2 {
 		left: initial;
