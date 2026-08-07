@@ -9,7 +9,11 @@ const defaults = {
 	onnew: null,
 	color: null,
 	flipBoard: true,
-	ready: true
+	ready: true,
+	// useBoard: true,
+	// useMoves: true,
+	// usePromotion: true,
+	blind: false
 };
 function cfg() {
 	return { ...defaults, ...(window.chess || {})};
@@ -95,7 +99,7 @@ function loadBoard(board=gameBoard) {
 			wrapper.appendChild(img);
 
 			piece.appendChild(wrapper);
-			boardEl.appendChild(piece);
+			if (!cfg().blind) boardEl.appendChild(piece);
 		});
 	});
 }
@@ -189,7 +193,7 @@ function encodeRepitionInfo(s=state) {
 	return fen.join(' ');
 }
 
-const moveHistoryButtons = [
+let moveHistoryButtons = [
 	document.getElementById('mh-start'),
 	document.getElementById('mh-prev'),
 	document.getElementById('mh-next'),
@@ -199,6 +203,7 @@ const moveHistoryButtons = [
 	document.getElementById('dh-next'),
 	document.getElementById('dh-end')
 ];
+if (moveHistoryButtons.every(i => !i)) moveHistoryButtons = [];
 function syncTempState(buttonsOnly=false, sound=false) {
 	if (!cfg().timeline) {
 		tempStatePos = null;
@@ -239,7 +244,7 @@ function syncTempState(buttonsOnly=false, sound=false) {
 			newActive.dataset.active = '';
 		}
 	});
-	moveLists[1].scrollTo({
+	moveLists[1]?.scrollTo({
 		top: moveLists[1].scrollHeight,
 		behavior: 'smooth'
 	});
@@ -525,10 +530,11 @@ function checkInsufficient(end=true, board=gameBoard) {
 	return false;
 }
 
-const moveLists = [
+let moveLists = [
 	document.getElementById('mobile-moves'),
 	document.getElementById('desktop-moves')
 ];
+if (moveLists.every(i => !i)) moveLists = [];
 function logMove(from, to, algebraic=null, promoteTo=null, propegate=true) {
 	let buttonsOnly = true;
 	if (tempStatePos !== null) {
@@ -540,7 +546,7 @@ function logMove(from, to, algebraic=null, promoteTo=null, propegate=true) {
 				(m, i) => i % 2 === 0 ? [`${Math.floor(i/2) + 1}.`, m.join('')] : [m.join('')]
 			).map(e => `<p>${e}</p>`).join('');
 		});
-		moveLists[1].scrollTo({
+		moveLists[1]?.scrollTo({
 			top: moveLists[1].scrollHeight,
 			behavior: 'smooth'
 		});
@@ -582,7 +588,7 @@ function logMove(from, to, algebraic=null, promoteTo=null, propegate=true) {
 			moveEle.innerText = algebraic.join('');
 			ele.appendChild(moveEle);
 		});
-		moveLists[1].scrollTo({
+		moveLists[1]?.scrollTo({
 			top: moveLists[1].scrollHeight,
 			behavior: 'smooth'
 		});
@@ -988,6 +994,8 @@ async function promote(color, from, to, auto=null) {
 	let pawn = getPiece(from.f, from.r);
 	pawn.hidden = true;
 
+	if (!auto && cfg().blind) return [[], false, null, null];
+
 	let pTo;
 	if (!auto) {
 		promotion.w.hidden = true;
@@ -1084,6 +1092,45 @@ async function loadTCN(tcn) {
 	playSound('start');
 }
 
+function splitAlgebraic(algebraic) {
+	if (['O-O', 'O-O-O'].includes(algebraic)) {
+		return [algebraic, '', '', '', '', ''];
+	}
+	let resp = ['', '', '', '', '', ''];
+	if (!['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].includes(algebraic[0])) {
+		resp[0] = algebraic[0];
+		algebraic = algebraic.slice(1);
+	}
+	if (['+', '#'].includes(algebraic.at(-1))) {
+		resp[5] = algebraic.at(-1);
+		algebraic = algebraic.slice(0, -1);
+	}
+	if (algebraic.at(-2) === '=') {
+		resp[4] = algebraic.at(-1);
+		algebraic = algebraic.slice(0, -2);
+	}
+	if (algebraic.at(-3) === 'x') {
+		resp[2] = 'x';
+		resp[1] = algebraic.split('x')[0];
+		resp[3] = algebraic.split('x')[1];
+		return resp;
+	}
+
+	resp[3] = algebraic.slice(-2);
+	resp[1] = algebraic.slice(0, -2);
+
+	return resp;
+}
+
+// 0piece|castle 1disambiguate? 2capture? 3to_square 4promote? 5check(mate)?
+async function getMoveAlgebraic(algebraic, color) {
+	const amove = splitAlgebraic(algebraic);
+	if (amove[0] === 'O-O') return ['e', 'g'].map(f => f + (color === 'w' ? '1' : '8'))
+	if (amove[0] === 'O-O-O') return ['e', 'c'].map(f => f + (color === 'w' ? '1' : '8'))
+	
+	// TODO
+}
+
 //
 
 let engine;
@@ -1149,7 +1196,7 @@ async function playEngine(time=1000, propegate=false) {
 //
 
 function ready() {
-	if (cfg().color && cfg().flipBoard) {
+	if (cfg().color && cfg().flipBoard && !cfg().blind) {
 		if (cfg().color !== 'w') {
 			boardEl.dataset.flipped = '1';
 		}

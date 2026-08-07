@@ -27,8 +27,8 @@
 	--light: #edb;
 	--dark: #b86;
 
-	--selected: rgba(255, 255, 0, 0.5);
-	--hint: rgba(0, 0, 0, 0.14);
+	--selected: rgba(255, 255, 0, .5);
+	--hint: rgba(0, 0, 0, .14);
 }
 
 *:not(.piece)[hidden], .piece[hidden] img {
@@ -38,7 +38,7 @@
 	display: none;
 }
 
-#board, .piece, use {
+#board:not(.blind), .piece, use {
 	pointer-events: none;
 	-webkit-user-drag: none;
 	-moz-user-drag: none;
@@ -82,7 +82,7 @@ body {
 	border: var(--border) solid hsl(var(--btn-h), calc(70% * var(--btn-s)), calc(48% * var(--btn-l)));
 	border-radius: var(--br);
 	box-shadow:
-		0 calc(var(--border)/2) calc(var(--border)/2) var(--border) hsla(var(--btn-h), calc(72% * var(--btn-s)), calc(30% * var(--btn-l)), 0.2),
+		0 calc(var(--border)/2) calc(var(--border)/2) var(--border) hsla(var(--btn-h), calc(72% * var(--btn-s)), calc(30% * var(--btn-l)), .2),
 		inset 0 calc(-1 * var(--border)) var(--border) 0 hsl(var(--btn-h), calc(70% * var(--btn-s)), calc(48% * var(--btn-l))),
 		inset 0 0 0 var(--border) hsl(var(--btn-h), calc(92% * var(--btn-s)), calc(62% * var(--btn-l)));
 
@@ -137,6 +137,61 @@ body {
 	height: calc(var(--piece) * 8);
 	box-sizing: border-box;
 }
+
+#blind {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+
+	display: flex;
+	flex-direction: column;
+
+	width: 80%;
+
+	p, h2, input, button {
+		margin: 0;
+		font-family: Arial;
+		color: var(--text);
+		
+		&::selection {
+			background: var(--text-s);
+		}
+	}
+	p {
+		height: calc(3 * var(--u));
+		line-height: calc(3 * var(--u));
+		font-size: calc(2 * var(--u));
+	}
+	h2 {
+		height: calc(5.5 * var(--u));
+		line-height: calc(5.5 * var(--u));
+		font-size: calc(5 * var(--u));
+	}
+	input {
+		height: calc(10 * var(--u));
+		font-size: calc(5 * var(--u));
+		padding: 0 calc(2 * var(--u));
+		box-sizing: border-box;
+		background: rgba(245, 245, 255, .11);
+		border: calc(.2 * var(--u)) solid rgba(255, 255, 255, .12);
+		border-radius: calc(1 * var(--u));
+
+		margin: calc(1 * var(--u)) 0;
+
+		&:hover {
+			border-color: rgba(255, 255, 255, .2);
+		}
+		&:focus {
+			outline: none;
+			border-color: #70f;
+		}
+	}
+	button {
+		font-size: calc(3 * var(--u));
+	}
+}
+
 
 #mobile-moves-wrapper {
 	position: absolute;
@@ -291,18 +346,18 @@ body {
 	--h: 100px;
 	height: var(--h);
 	box-sizing: border-box;
-	background: rgba(245, 245, 255, 0.11);
+	background: rgba(245, 245, 255, .11);
 	backdrop-filter: blur(20px);
-	border: calc(.2 * var(--u)) solid rgba(255, 255, 255, 0.12);
+	border: calc(.2 * var(--u)) solid rgba(255, 255, 255, .12);
 	border-radius: calc(2 * var(--u));
-	box-shadow: inset 0 calc(.8 * var(--h)) calc(.4 * var(--h)) calc(-.4 * var(--h)) rgba(245, 245, 255, 0.06);
+	box-shadow: inset 0 calc(.8 * var(--h)) calc(.4 * var(--h)) calc(-.4 * var(--h)) rgba(245, 245, 255, .06);
 
 	transition: .2s;
 
 	&:not(.dim):hover {
-		background: rgba(245, 245, 255, 0.13);
-		box-shadow: inset 0 calc(.8 * var(--h)) calc(.4 * var(--h)) calc(-.4 * var(--h)) rgba(245, 245, 255, 0.08);
-		border-top-color: rgba(255, 255, 255, 0.15);
+		background: rgba(245, 245, 255, .13);
+		box-shadow: inset 0 calc(.8 * var(--h)) calc(.4 * var(--h)) calc(-.4 * var(--h)) rgba(245, 245, 255, .08);
+		border-top-color: rgba(255, 255, 255, .15);
 		transform: scale(1.02);
 	}
 }
@@ -576,8 +631,8 @@ body {
 
 			.btn {
 				--h: 240;
-				--s: calc(0.01/0.83);
-				--l: calc(0.37/0.57);
+				--s: calc(.01/.83);
+				--l: calc(.37/.57);
 			}
 		}
 		.watermark {

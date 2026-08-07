@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>qChess</title>
+
+	<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+	<p id="debug"></p>
+	<p id="debug2"></p>
+	<p id="debug3"></p>
+
+	<svg style="display: none">
+		<symbol id="icon-check" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<path d="M4 12.6111L8.92308 17.5L20 6.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+		</symbol>
+		<symbol id="icon-x" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<path d="M6 6L18 18M18 6L6 18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+		</symbol>
+	</svg>
+
+	<div id="menu">
+		<div><h1>qchess.pro</h1></div>
+		<div>
+			<a class="underlined" onclick="newGame()">New Game<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
+			<!-- <a class="underlined" href="">More Coming Soon...<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a> -->
+		</div>
+	</div>
+
+	<div id="board" class="blind">
+		<div id="mobile-buttons">
+			<button id="mh-start" class="glass dim" onclick="moveHistory('start')">&lt;&lt;</button>
+			<button id="mh-prev" class="glass dim" onclick="moveHistory('prev')">&lt;</button>
+			<button id="mh-next" class="glass dim" onclick="moveHistory('next')">&gt;</button>
+			<button id="mh-end" class="glass dim" onclick="moveHistory('end')">&gt;&gt;</button>
+		</div>
+		<div id="blind">
+			<p>Last Move:</p>
+			<h2 id="blindmove">Loading...</h2>
+			<input type="text" id="blindinput">
+			<button id="blindsend" class="glass" onclick="sendMove()">Move</button>
+		</div>
+	</div>
+
+	<div id="desktop">
+		<div id="desktop-moves"></div>
+		<div id="desktop-buttons">
+			<button id="dh-prev" class="glass dim" onclick="moveHistory('prev')">&lt;</button>
+			<button id="dh-next" class="glass dim" onclick="moveHistory('next')">&gt;</button>
+			<button id="dh-start" class="glass dim" onclick="moveHistory('start')">&lt;&lt;</button>
+			<button id="dh-end" class="glass dim" onclick="moveHistory('end')">&gt;&gt;</button>
+		</div>
+	</div>
+
+	<div class="wrapper" id="result" hidden>
+		<div class="modal">
+			<div class="condition">
+				<h1>White Wins</h1>
+				<h2>By Checkmate</h2>
+			</div>
+			<div class="options">
+				<button class="btn">Coming Soon</button>
+				<button class="btn" onclick="startNew()">New Game</button>
+			</div>
+			<p class="watermark">qchess.pro</p>
+		</div>
+	</div>
+
+	<script src="/chess.js"></script>
+	<script>
+		newGame();
+	</script>
+</body>
+</html>
