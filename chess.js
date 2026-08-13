@@ -80,6 +80,7 @@ function clearSquares() {
 }
 
 function loadBoard(board=gameBoard) {
+	if (cfg().blind) return;
 	clearPieces();
 	clearSquares();
 	board.forEach((rank, r) => {
@@ -139,9 +140,9 @@ function loadFEN(fen, includeState=true) {
 			state: []
 		};
 
-		moveLists.forEach(ele => {
-			ele.innerHTML = '';
-		})
+		moveLists.forEach(e => {
+			if (e) e.innerHTML = '';
+		});
 	}
 }
 function getFEN(includeState=true, board=gameBoard) {
@@ -762,7 +763,8 @@ async function makeMove(from, to, sim=false, skip=false, autoPromote=null, prope
 					if (potential !== '') {
 						if (
 							color === getColor(potential) &&
-							potential.toLowerCase() === pType
+							potential.toLowerCase() === pType &&
+							(await validMove({ f: potentialF, r: potentialR }, to, color))
 						) {
 							if (potentialF === from.f) deambiguate.r = true;
 							if (potentialR === from.r) deambiguate.f = true;
@@ -1051,7 +1053,8 @@ function newGame() {
 		engine.postMessage('ucinewgame');
 		engine.postMessage('position startpos');
 	}
-	loadFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+	// loadFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+	loadFEN('rnbqkbnr/ppp1ppp1/8/2PpP3/8/7P/PP1P1P1P/RNBQKBNR w KQkq d6 0 6');
 	loadBoard();
 	results.wrapper.hidden = true;
 	playSound('start');
@@ -1097,7 +1100,7 @@ function splitAlgebraic(algebraic) {
 		return [algebraic, '', '', '', '', ''];
 	}
 	let resp = ['', '', '', '', '', ''];
-	if (!['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].includes(algebraic[0])) {
+	if (!/^[a-h]+$/.test(algebraic[0])) {
 		resp[0] = algebraic[0];
 		algebraic = algebraic.slice(1);
 	}
@@ -1123,12 +1126,69 @@ function splitAlgebraic(algebraic) {
 }
 
 // 0piece|castle 1disambiguate? 2capture? 3to_square 4promote? 5check(mate)?
-async function getMoveAlgebraic(algebraic, color) {
+async function getMoveAlgebraic(algebraic, color, board=gameBoard) {
 	const amove = splitAlgebraic(algebraic);
 	if (amove[0] === 'O-O') return ['e', 'g'].map(f => f + (color === 'w' ? '1' : '8'))
 	if (amove[0] === 'O-O-O') return ['e', 'c'].map(f => f + (color === 'w' ? '1' : '8'))
 	
-	// TODO
+	let tempBoard = board.map(r => [...r]);
+	const pType = amove[0] ? amove[0].toLowerCase() : 'p';
+	
+	if (amove[1]) {
+		if (/^\d+$/.test(amove[1].at(-1))) {
+			tempBoard = tempBoard.map((r, n) => n === 8 - parseInt(amove[1].at(-1)) ? r : r.map(_=>''));
+		}
+		if (/^[a-h]+$/.test(amove[1][0])) {
+			let dfile = 'abcdefgh'.indexOf(amove[1][0]);
+			tempBoard = tempBoard.map(r => r.map((f, n) => n === dfile ? f : ''));
+		}
+	}
+	
+	// TODO: test
+	let from = [];
+	if (pType === 'p') {
+		const pfile = 'abcdefgh'.indexOf(amove[3][0]) + 1;
+		const prank = parseInt(amove[3][1]);
+		if (amove[2]) {
+			[-1, 1].forEach(d => from.push([pfile + d, prank - (color === 'w' ? 1 : -1)]));
+		} else if (!tempBoard[8 - prank]?.[pfile-1]) {
+			from.push([pfile, prank - (color === 'w' ? 1 : -1)]);
+			if (
+				!tempBoard[8 - prank + (color === 'w' ? 1 : -1)]?.[pfile-1] &&
+				prank === (color === 'w' ? 4 : 5)
+			) {
+				from.push([pfile, prank - (color === 'w' ? 2 : -2)]);
+			}
+		}
+	} else {
+		
+
+		// for (const [df, dr] of moveDeltas[pType]) {
+		// 	for (let i = 1; i < 8; i++) {
+		// 		const potential = getBoard(kingPos[0] + df * i, kingPos[1] + dr * i, board);
+		// 		if (potential === null) break;
+		// 		if (potential !== '') {
+		// 			if (
+		// 				color !== getColor(potential) &&
+		// 				(potential.toLowerCase() === pType ||
+		// 				potential.toLowerCase() === 'q')
+		// 			) return true;
+		// 			break;
+		// 		}
+		// 	}
+		// }
+	}
+
+	console.log(amove);
+	// console.log(from);
+	from.forEach(f => console.log(getSquareName(f[0], f[1]), amove[3]));
+	from = from.filter(([f, r]) => tempBoard[8-r]?.[f-1] === (color === 'w' ? pType.toUpperCase() : pType));
+
+	if (from.length !== 1) {
+		return { success: false, from };
+	} else {
+		return { success: true, from: { f: from[0][0], r: from[0][1] }, to: getNameSquare(amove[3]) };
+	}
 }
 
 //
