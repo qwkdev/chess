@@ -37,6 +37,13 @@ async function wait(ms) {
 const boardEl = document.getElementById('board');
 let state = {
 	end: null,
+	time: {
+		on: false,
+		used: { w: 0, b: 0 },
+		has: { w: 0, b: 0 },
+		rule: { w: 0, b: 0, i: 0 },
+		move: { w: 0, b: 0 }
+	},
 	turn: 'w',
 	halfmoves: 0,
 	fmr: 0,
@@ -120,6 +127,13 @@ function loadFEN(fen, includeState=true) {
 
 	if (includeState) {
 		state.end = null;
+		state.time = {
+			on: false,
+			used: { w: 0, b: 0 },
+			has: { w: 0, b: 0 },
+			rule: { w: 0, b: 0, i: 0 },
+			move: { w: 0, b: 0 }
+		};
 		state.turn = pieces[1];
 		state.halfmoves = Number(pieces[5])*2 - (state.turn === 'w' ? 2 : 1);
 		state.fmr = Number(pieces[4]);
