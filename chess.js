@@ -313,7 +313,7 @@ function getColor(piece) {
 
 function getBoard(f, r, board=gameBoard) {
 	if (f < 1 || f > 8 || r < 1 || r > 8) return null;
-	return board[8 - r][f - 1];
+	return board[8 - r]?.[f - 1] ?? null;
 }
 function getRank(r, board=gameBoard) {
 	if (r < 1 || r > 8) return null;
@@ -771,17 +771,16 @@ async function makeMove(from, to, sim=false, skip=false, autoPromote=null, prope
 			let deambiguate = { f: false, r: false };
 			for (const [df, dr] of moveDeltas[pType]) {
 				for (let i = 1; i < (pType === 'n' ? 2 : 8); i++) {
-					const [potentialF, potentialR] = [to.f + df * i, to.r + dr * i]
-					const potential = getBoard(potentialF, potentialR);
+					const pFrom = { f: to.f + df * i, r: to.r + dr * i};
+					const potential = getBoard(pFrom.f, pFrom.r);
 					if (potential === null) break;
 					if (potential !== '') {
 						if (
-							color === getColor(potential) &&
-							potential.toLowerCase() === pType &&
-							(await validMove({ f: potentialF, r: potentialR }, to, color))
+							potential === (color === 'w' ? pType.toUpperCase() : pType) &&
+							(await validMove(pFrom, to, color))
 						) {
-							if (potentialF === from.f) deambiguate.r = true;
-							if (potentialR === from.r) deambiguate.f = true;
+							if (pFrom.f === from.f) deambiguate.r = true;
+							if (pFrom.r === from.r) deambiguate.f = true;
 						}
 						break;
 					}
@@ -1068,7 +1067,8 @@ function newGame() {
 		engine.postMessage('position startpos');
 	}
 	// loadFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
-	loadFEN('rnbqkbnr/ppp1ppp1/8/2PpP3/8/7P/PP1P1P1P/RNBQKBNR w KQkq d6 0 6');
+	loadFEN('kr6/rr4Q1/8/8/8/5Q2/1Q4Q1/7K w - - 0 1');
+	// 5q1k/1B6/8/8/8/1B3B2/8/5K2 w - - 0 1
 	loadBoard();
 	results.wrapper.hidden = true;
 	playSound('start');
@@ -1160,43 +1160,41 @@ async function getMoveAlgebraic(algebraic, color, board=gameBoard) {
 	
 	// TODO: test
 	let from = [];
+	const to = {
+		f: 'abcdefgh'.indexOf(amove[3][0]) + 1,
+		r: parseInt(amove[3][1])
+	};
 	if (pType === 'p') {
-		const pfile = 'abcdefgh'.indexOf(amove[3][0]) + 1;
-		const prank = parseInt(amove[3][1]);
 		if (amove[2]) {
-			[-1, 1].forEach(d => from.push([pfile + d, prank - (color === 'w' ? 1 : -1)]));
-		} else if (!tempBoard[8 - prank]?.[pfile-1]) {
-			from.push([pfile, prank - (color === 'w' ? 1 : -1)]);
+			[-1, 1].forEach(d => from.push([to.f + d, to.r - (color === 'w' ? 1 : -1)]));
+		} else if (!getBoard(to.f, to.r, tempBoard)) {
+			from.push([to.f, to.r - (color === 'w' ? 1 : -1)]);
 			if (
-				!tempBoard[8 - prank + (color === 'w' ? 1 : -1)]?.[pfile-1] &&
-				prank === (color === 'w' ? 4 : 5)
-			) {
-				from.push([pfile, prank - (color === 'w' ? 2 : -2)]);
-			}
+				!getBoard(to.f, to.r - (color === 'w' ? 1 : -1), tempBoard) &&
+				to.r === (color === 'w' ? 4 : 5)
+			) from.push([to.f, to.r - (color === 'w' ? 2 : -2)]);
 		}
 	} else {
-		
-
-		// for (const [df, dr] of moveDeltas[pType]) {
-		// 	for (let i = 1; i < 8; i++) {
-		// 		const potential = getBoard(kingPos[0] + df * i, kingPos[1] + dr * i, board);
-		// 		if (potential === null) break;
-		// 		if (potential !== '') {
-		// 			if (
-		// 				color !== getColor(potential) &&
-		// 				(potential.toLowerCase() === pType ||
-		// 				potential.toLowerCase() === 'q')
-		// 			) return true;
-		// 			break;
-		// 		}
-		// 	}
-		// }
+		for (const [df, dr] of moveDeltas[pType]) {
+			for (let i = 1; i < (pType === 'n' || pType === 'k' ? 2 : 8); i++) {
+				const pFrom = { f: to.f + df * i, r: to.r + dr * i};
+				const potential = getBoard(pFrom.f, pFrom.r, tempBoard);
+				if (potential === null) break;
+				if (potential !== '') {
+					if (
+						potential === (color === 'w' ? pType.toUpperCase() : pType) &&
+						(await validMove(pFrom, to, color))
+					) from.push([pFrom.f, pFrom.r]);
+					break;
+				}
+			}
+		}
 	}
 
 	console.log(amove);
 	// console.log(from);
 	from.forEach(f => console.log(getSquareName(f[0], f[1]), amove[3]));
-	from = from.filter(([f, r]) => tempBoard[8-r]?.[f-1] === (color === 'w' ? pType.toUpperCase() : pType));
+	from = from.filter(([f, r]) => getBoard(f, r, tempBoard) === (color === 'w' ? pType.toUpperCase() : pType));
 
 	if (from.length !== 1) {
 		return { success: false, from };
