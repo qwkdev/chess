@@ -712,10 +712,7 @@ async function makeMove(from, to, sim=false, skip=false, autoPromote=null, prope
 		gameBoard[8 - (to.r + (color === 'w' ? -1 : 1))][to.f - 1] = '';
 	}
 
-	if (defaultMove) {
-		if (!sim) queue.push([simpleMove(from, to), to]);
-		moves.push([from, to]);
-	}
+	if (defaultMove) moves.push([from, to]);
 
 	if (sim) {
 		let simBoard = gameBoard.map(r => [...r]);
@@ -725,6 +722,49 @@ async function makeMove(from, to, sim=false, skip=false, autoPromote=null, prope
 		});
 		return simBoard;
 	}
+
+	if (!algebraicDone) {
+		if (pType !== 'p') algebraic[0] = piece.toUpperCase();
+		if (capture) algebraic[2] = 'x';
+
+		algebraic[3] = getSquareName(to.f, to.r);
+
+		if (pType === 'p' && capture) algebraic[1] = getSquareName(from.f, from.r)[0];
+		if (['n', 'b', 'r', 'q'].includes(pType)) {
+			let deambiguate = { f: false, r: false };
+			let possible = [];
+			for (const [df, dr] of moveDeltas[pType]) {
+				for (let i = 1; i < (pType === 'n' ? 2 : 8); i++) {
+					const pFrom = { f: to.f + df * i, r: to.r + dr * i};
+					const potential = getBoard(pFrom.f, pFrom.r);
+					if (potential === null) break;
+					if (potential !== '') {
+						if (
+							potential === (color === 'w' ? pType.toUpperCase() : pType) &&
+							(await legalMove(pFrom, to))
+						) possible.push(pFrom);
+						break;
+					}
+				}
+			}
+
+			if (possible.length > 1) {
+				if (new Set(possible.map(i=>i.f)).size === possible.length) {
+					deambiguate.f = true;
+				} else if (new Set(possible.map(i=>i.r)).size === possible.length) {
+					deambiguate.r = true;
+				} else {
+					deambiguate.f = true;
+					deambiguate.r = true;
+				}
+			}
+
+			const fromName = getSquareName(from.f, from.r);
+			algebraic[1] = (deambiguate.f ? fromName[0] : '') + (deambiguate.r ? fromName[1] : '');
+		}
+	}
+
+	if (defaultMove) queue.push([simpleMove(from, to), to]);
 
 	if (pType === 'k') {
 		state.castling[color] = { k: false, q: false };
@@ -760,38 +800,6 @@ async function makeMove(from, to, sim=false, skip=false, autoPromote=null, prope
 	if (state.fmr >= 100) endGame(8);
 	checkInsufficient();
 
-	if (!algebraicDone) {
-		if (pType !== 'p') algebraic[0] = piece.toUpperCase();
-		if (capture) algebraic[2] = 'x';
-
-		algebraic[3] = getSquareName(to.f, to.r);
-
-		if (pType === 'p' && capture) algebraic[1] = getSquareName(from.f, from.r)[0];
-		if (['n', 'b', 'r', 'q'].includes(pType)) {
-			let deambiguate = { f: false, r: false };
-			for (const [df, dr] of moveDeltas[pType]) {
-				for (let i = 1; i < (pType === 'n' ? 2 : 8); i++) {
-					const pFrom = { f: to.f + df * i, r: to.r + dr * i};
-					const potential = getBoard(pFrom.f, pFrom.r);
-					if (potential === null) break;
-					if (potential !== '') {
-						if (
-							potential === (color === 'w' ? pType.toUpperCase() : pType) &&
-							(await validMove(pFrom, to, color))
-						) {
-							if (pFrom.f === from.f) deambiguate.r = true;
-							if (pFrom.r === from.r) deambiguate.f = true;
-						}
-						break;
-					}
-				}
-			}
-
-			const fromName = getSquareName(from.f, from.r);
-			algebraic[1] = (deambiguate.f ? fromName[0] : '') + (deambiguate.r ? fromName[1] : '');
-		}
-	}
-
 	logMove(from, to, algebraic, promoteTo, !sim && !skip && propegate);
 
 	if (!skip) {
@@ -817,7 +825,7 @@ async function canCastleThrough(color, f, r, checkEmpty=true) {
 	return !(await checkCheck(simBoard, color));
 }
 
-async function validMove(pos, move, color) {
+async function unpinnedMove(pos, move, color) {
 	const simBoard = await makeMove(pos, move, true);
 	const inCheck = checkCheck(simBoard, color);
 	return !inCheck;
@@ -906,7 +914,7 @@ async function getLegalMoves(pos, forceTurn=true, exists=false) {
 
 	if (exists) {
 		for (const m of moves) {
-			if (await validMove(pos, { f: m[0], r: m[1] }, color)) {
+			if (await unpinnedMove(pos, { f: m[0], r: m[1] }, color)) {
 				return true;
 			}
 		}
@@ -914,7 +922,7 @@ async function getLegalMoves(pos, forceTurn=true, exists=false) {
 	}
 
 	const valid = await Promise.all(moves.map(
-		async m => validMove(pos, { f: m[0], r: m[1] }, color)
+		async m => unpinnedMove(pos, { f: m[0], r: m[1] }, color)
 	));
 	moves = moves.filter((_, i) => valid[i]);
 
@@ -1067,8 +1075,8 @@ function newGame() {
 		engine.postMessage('position startpos');
 	}
 	// loadFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
-	loadFEN('kr6/rr4Q1/8/8/8/5Q2/1Q4Q1/7K w - - 0 1');
-	// 5q1k/1B6/8/8/8/1B3B2/8/5K2 w - - 0 1
+	// loadFEN('kr6/rr4Q1/8/8/8/5Q2/1Q4Q1/7K w - - 0 1');
+	loadFEN('5q1k/8/8/8/8/1B3B2/8/5K2 w - - 0 1');
 	loadBoard();
 	results.wrapper.hidden = true;
 	playSound('start');
@@ -1183,7 +1191,7 @@ async function getMoveAlgebraic(algebraic, color, board=gameBoard) {
 				if (potential !== '') {
 					if (
 						potential === (color === 'w' ? pType.toUpperCase() : pType) &&
-						(await validMove(pFrom, to, color))
+						(await legalMove(pFrom, to, color))
 					) from.push([pFrom.f, pFrom.r]);
 					break;
 				}
@@ -1191,11 +1199,7 @@ async function getMoveAlgebraic(algebraic, color, board=gameBoard) {
 		}
 	}
 
-	console.log(amove);
-	// console.log(from);
-	from.forEach(f => console.log(getSquareName(f[0], f[1]), amove[3]));
 	from = from.filter(([f, r]) => getBoard(f, r, tempBoard) === (color === 'w' ? pType.toUpperCase() : pType));
-
 	if (from.length !== 1) {
 		return { success: false, from };
 	} else {
