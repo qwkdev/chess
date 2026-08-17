@@ -1074,9 +1074,9 @@ function newGame() {
 		engine.postMessage('ucinewgame');
 		engine.postMessage('position startpos');
 	}
-	// loadFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+	loadFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
 	// loadFEN('kr6/rr4Q1/8/8/8/5Q2/1Q4Q1/7K w - - 0 1');
-	loadFEN('5q1k/8/8/8/8/1B3B2/8/5K2 w - - 0 1');
+	// loadFEN('5q1k/8/8/8/8/1B3B2/8/5K2 w - - 0 1');
 	loadBoard();
 	results.wrapper.hidden = true;
 	playSound('start');
@@ -1173,6 +1173,10 @@ async function getMoveAlgebraic(algebraic, color, board=gameBoard) {
 		r: parseInt(amove[3][1])
 	};
 	if (pType === 'p') {
+		if (to.r === (color === 'w' ? 8 : 1) && !['q', 'r', 'b', 'k'].includes(amove[4]?.toLowerCase())) {
+			return { success: false, error: 'Missing promotion choice'};
+		}
+
 		if (amove[2]) {
 			[-1, 1].forEach(d => from.push([to.f + d, to.r - (color === 'w' ? 1 : -1)]));
 		} else if (!getBoard(to.f, to.r, tempBoard)) {
@@ -1201,9 +1205,14 @@ async function getMoveAlgebraic(algebraic, color, board=gameBoard) {
 
 	from = from.filter(([f, r]) => getBoard(f, r, tempBoard) === (color === 'w' ? pType.toUpperCase() : pType));
 	if (from.length !== 1) {
-		return { success: false, from };
+		return { success: false, from, error: from.length < 1 ? 'Couldn\'t find piece' : 'Mutiple possible pieces' };
 	} else {
-		return { success: true, from: { f: from[0][0], r: from[0][1] }, to: getNameSquare(amove[3]) };
+		return {
+			success: true,
+			from: { f: from[0][0], r: from[0][1] },
+			to: getNameSquare(amove[3]),
+			promote: pType === 'p' && to.r === (color === 'w' ? 8 : 1) && ['q', 'r', 'b', 'k'].includes(amove[4]?.toLowerCase()) ? amove[4] : null
+		};
 	}
 }
 
