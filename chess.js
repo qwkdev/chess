@@ -1249,7 +1249,9 @@ async function blindMove() {
 	}
 }
 
-blindInput.addEventListener('oninput', () => blindError.innerText = '');
+if (cfg().blind) {
+	blindInput.addEventListener('oninput', () => blindError.innerText = '');
+}
 
 //
 
