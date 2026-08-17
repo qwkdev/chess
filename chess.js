@@ -556,7 +556,7 @@ let moveLists = [
 	document.getElementById('mobile-moves'),
 	document.getElementById('desktop-moves')
 ];
-if (moveLists.every(i => !i)) moveLists = [];
+if (!moveLists.every(i => i)) moveLists = [];
 function logMove(from, to, algebraic=null, promoteTo=null, propegate=true) {
 	let buttonsOnly = true;
 	if (tempStatePos !== null) {
