@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>qChess</title>
+
+	<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+	<p id="debug"></p>
+	<p id="debug2"></p>
+	<p id="debug3"></p>
+
+	<svg style="display: none">
+		<symbol id="icon-check" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<path d="M4 12.6111L8.92308 17.5L20 6.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+		</symbol>
+		<symbol id="icon-x" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<path d="M6 6L18 18M18 6L6 18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+		</symbol>
+	</svg>
+
+	<div id="menu">
+		<div><h1>qchess.pro</h1></div>
+		<div>
+			<a class="underlined" onclick="startNew()">New Game<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
+			<!-- <a class="underlined" href="">More Coming Soon...<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a> -->
+		</div>
+	</div>
+
+	<div id="board" class="blind">
+		<div id="mobile-buttons">
+			<button id="mh-start" class="glass dim" onclick="moveHistory('start')">&lt;&lt;</button>
+			<button id="mh-prev" class="glass dim" onclick="moveHistory('prev')">&lt;</button>
+			<button id="mh-next" class="glass dim" onclick="moveHistory('next')">&gt;</button>
+			<button id="mh-end" class="glass dim" onclick="moveHistory('end')">&gt;&gt;</button>
+		</div>
+		<div id="blind">
+			<p id="blindinfo">Last Move:</p>
+			<h2 id="blindmove">Loading...</h2>
+			<input type="text" id="blindinput">
+			<button class="glass" onclick="blindMove()">Move</button>
+			<p id="blinderror"></p>
+		</div>
+	</div>
+
+	<div id="desktop">
+		<div id="desktop-moves"></div>
+		<div id="desktop-buttons">
+			<button id="dh-prev" class="glass dim" onclick="moveHistory('prev')">&lt;</button>
+			<button id="dh-next" class="glass dim" onclick="moveHistory('next')">&gt;</button>
+			<button id="dh-start" class="glass dim" onclick="moveHistory('start')">&lt;&lt;</button>
+			<button id="dh-end" class="glass dim" onclick="moveHistory('end')">&gt;&gt;</button>
+		</div>
+	</div>
+
+	<div class="wrapper" id="result" hidden>
+		<div class="modal">
+			<div class="condition">
+				<h1>White Wins</h1>
+				<h2>By Checkmate</h2>
+			</div>
+			<div class="options">
+				<button class="btn">Coming Soon</button>
+				<button class="btn" onclick="startNew()">New Game</button>
+			</div>
+			<p class="watermark">qchess.pro</p>
+		</div>
+	</div>
+
+	<div class="wrapper" id="create" hidden>
+		<div class="modal">
+			<div class="condition">
+				<h1>New Game</h1>
+				<h2>Blind Online</h2>
+			</div>
+			<div class="options">
+				<button class="btn" onclick="init()">Create Game</button>
+				<button class="btn" onclick="joinGame()">Join Game</button>
+			</div>
+			<p class="watermark">qchess.pro</p>
+		</div>
+	</div>
+
+	<script>
+		window.chess = {
+			blind: true,
+			ready: false,
+			timeline: false
+		};
+	</script>
+	<script src="/chess.js"></script>
+	<script>
+		let game = window.location.search.slice(1).toUpperCase();
+		const client = getClient();
+		let last = 0;
+
+		const SERVER = 'https://gameapi.pythonanywhere.com';
+
+		let syncloop = -1;
+		async function sync() {
+			const resp = await fetch(`${SERVER}/sync`, {
+				method: 'POST',
+				headers: {
+					'Accept': 'application/json',
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					game, last: state.halfmoves
+				})
+			})
+				.then(r => r.json())
+				.catch(console.error);
+
+			if (!resp || !resp.success) throw Error('Error Syncing');
+
+			if (resp.last < state.halfmoves && resp.fen) {
+				loadFEN(resp.fen);
+				loadBoard();
+				results.wrapper.hidden = true;
+			}
+
+			if (resp.moves.length > 0) {
+				for (const move of resp.moves) {
+					await makeMove(
+						getNameSquare(move[0]),
+						getNameSquare(move[1]),
+						false,
+						false,
+						move[2] || null,
+						false
+					);
+				}
+				last = resp.last;
+			}
+
+			if (syncloop !== null && (!window.chess.color || state.turn !== window.chess.color))
+				syncloop = setTimeout(sync, 500);
+		}
+		function startSync() {
+			syncloop = -1;
+			sync();
+		}
+		function stopSync() {
+			clearTimeout(syncloop);
+			syncloop = null;
+		}
+
+		async function sendMove(from, to, promoteTo=null) {
+			if (last >= state.halfmoves) return;
+
+			stopSync();
+
+			const move = [
+				getSquareName(from.f, from.r),
+				getSquareName(to.f, to.r),
+				promoteTo,
+				getFEN()
+			];
+			fetch(`${SERVER}/move`, {
+				method: 'POST',
+				headers: {
+					'Accept': 'application/json',
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					game, client, move
+				})
+			})
+				.then(r => r.json())
+				.then(r => {
+					if (!r.success) setTimeout(() => sendMove(from, to, promoteTo), 500);
+					else {
+						last = r.last;
+						startSync();
+					}
+				})
+				.catch(e => {
+					console.error(e);
+					setTimeout(() => sendMove(from, to, promoteTo), 500);
+				});
+		}
+
+		function startNew() {
+			window.location.search = '';
+		}
+
+		window.chess.onmove = sendMove;
+		window.chess.onend = () => stopSync();
+		newGame();
+
+		const createModal = document.getElementById('create');
+		async function init() {
+			createModal.hidden = true;
+			const resp = await fetch(`${SERVER}/join`, {
+				method: 'POST',
+				headers: {
+					'Accept': 'application/json',
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ game: game || null, client })
+			})
+				.then(r => r.json())
+				.catch(e => {
+					console.error(e);
+					window.location.search = '';
+				});
+
+			if (resp.success) {
+				if (resp.game) game = resp.game;
+				
+				history.replaceState({}, '', window.location.pathname + `?${game}`);
+				window.chess.color = resp.data[1] === 0 ? 'w' : 'b';
+
+				const gameInfo = document.createElement('div');
+				gameInfo.style.setProperty('--n', 2);
+				gameInfo.innerHTML = `<p>Code: ${game}</p><p>${resp.data[1] === 0 ? 'White' : 'Black'}</p>`;
+				document.getElementById('menu').appendChild(gameInfo);
+
+				startSync();
+				ready();
+			} else {
+				window.location.search = '';
+			}
+		}
+
+		function joinGame() {
+			game = prompt('Enter code:').toUpperCase();
+			if (game) init();
+		}
+
+		if (!game) createModal.hidden = false;
+		else init();
+	</script>
+</body>
+</html>

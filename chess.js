@@ -158,7 +158,7 @@ function loadFEN(fen, includeState=true) {
 			if (e) e.innerHTML = '';
 		});
 		if (cfg().blind) {
-			blindLastMove.innerText = '';
+			if (cfg().ready) setBlindLastMove('');
 			blindInput.value = '';
 			blindError.innerText = '';
 		}
@@ -550,7 +550,12 @@ function checkInsufficient(end=true, board=gameBoard) {
 	return false;
 }
 
+const blindInfo = document.getElementById('blindinfo');
 const blindLastMove = document.getElementById('blindmove');
+function setBlindLastMove(move) {
+	blindLastMove.innerText = move;
+	blindInfo.innerHTML = `${state.turn === 'w' ? 'White' : 'Black'} to Move &nbsp;&bullet;&nbsp; Last Move:`;
+}
 
 let moveLists = [
 	document.getElementById('mobile-moves'),
@@ -616,9 +621,7 @@ function logMove(from, to, algebraic=null, promoteTo=null, propegate=true) {
 		});
 	}
 
-	if (cfg().blind) {
-		blindLastMove.innerText = algebraic.join('');
-	}
+	if (cfg().blind) setBlindLastMove(algebraic.join(''))
 
 	syncTempState(buttonsOnly);
 	if (propegate && cfg().onmove !== null) cfg().onmove(from, to, promoteTo);
@@ -1233,6 +1236,10 @@ async function getMoveAlgebraic(algebraic, color, board=gameBoard) {
 async function makeMoveAlgebraic(algebraic, color) {
 	const move = await getMoveAlgebraic(algebraic, color);
 	if (move.success) {
+		if (!(await legalMove(move.from, move.to))) {
+			return { success: false, error: 'Illegal' };
+		}
+
 		await makeMove(move.from, move.to, false, false, move.promote || null);
 		return { success: true };
 	} else {
@@ -1253,7 +1260,8 @@ async function blindMove() {
 }
 
 if (cfg().blind) {
-	blindInput.addEventListener('oninput', () => blindError.innerText = '');
+	blindInput.addEventListener('input', () => blindError.innerText = '');
+	blindInput.addEventListener('keyup', e => { if (e.key === 'Enter') blindMove(); });
 }
 
 //
@@ -1326,6 +1334,7 @@ function ready() {
 			boardEl.dataset.flipped = '1';
 		}
 	}
+	if (cfg().blind) setBlindLastMove(cfg().color ? (cfg().color === 'w' ? 'Start' : 'Waiting...') : '')
 	window.chess.ready = true;
 }
 

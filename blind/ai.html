@@ -27,6 +27,9 @@
 			<a class="underlined" onclick="newGame()">New Game<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a>
 			<!-- <a class="underlined" href="">More Coming Soon...<span class="underline" style="--widen: 0%; --fix: 0%;"></span></a> -->
 		</div>
+		<div id="gameinfo" style="--n:2">
+			<p>Loading Engine...</p>
+		</div>
 	</div>
 
 	<div id="board" class="blind">
@@ -71,12 +74,54 @@
 
 	<script>
 		window.chess = {
-			blind: true
+			blind: true,
+			ready: false
 		};
 	</script>
 	<script src="/chess.js"></script>
 	<script>
+		const params = new URLSearchParams(window.location.search);		
+		const rating = parseInt(params.get('r')) || null;
+		if (rating && rating > 0) window.chess.engineElo = rating;
+
+		let moveTime = parseInt(params.get('t')) || null;
+		if (!moveTime || moveTime <= 0) moveTime = 1000;
+
+		function round(n, p) {
+			return Math.round(n*Math.pow(10, p))/Math.pow(10, p);
+		}
+
+		const gameInfo = document.getElementById('gameinfo');
+		window.chess.onnew = () => {
+			window.chess.color = ['w', 'b'].includes(params.get('c')) ? params.get('c') : (Math.random() < .5 ? 'w' : 'b');
+			if (engineReady) {
+				gameInfo.innerHTML = `<p>Stockfish (${
+					window.chess.engineElo || 'Max '
+				} Elo ${
+					round(moveTime/1000, 1)
+				}s)</p><p>${
+					window.chess.color === 'w' ? 'White' : 'Black'
+				}</p>`;
+				if (window.chess.color !== 'w') playEngine(moveTime);
+			}
+		};
 		newGame();
+
+		window.chess.onmove = async _ => {
+			await playEngine(moveTime);
+		}
+		window.chess.onEngineReady = () => {
+			ready();
+			gameInfo.innerHTML = `<p>Stockfish (${
+				window.chess.engineElo || 'Max '
+			} Elo ${
+				round(moveTime/1000, 1)
+			}s)</p><p>${
+				window.chess.color === 'w' ? 'White' : 'Black'
+			}</p>`;
+			if (window.chess.color !== 'w') playEngine(moveTime);
+		};
+		loadStockfish();
 	</script>
 </body>
 </html>
