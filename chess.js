@@ -633,17 +633,20 @@ function simpleMove(from, to) {
 }
 
 async function animate(ele, num) {
+	if (cfg().blind) return;
 	ele.classList.add(`anim${num}`);
 	await wait(1000);
 	ele.classList.remove(`anim${num}`);
 }
 
 async function showSimpleMove(piece, to) {
+	if (cfg().blind) return;
 	piece.style.setProperty('--f', to.f);
 	piece.style.setProperty('--r', to.r);
 	if (state.end !== null) await animate(piece, 1);
 }
 async function showSimpleRemove(piece) {
+	if (cfg().blind) return;
 	if (state.end !== null) await wait(600);
 	piece.remove();
 }
