@@ -190,6 +190,9 @@ body {
 	button {
 		font-size: calc(3 * var(--u));
 	}
+	#blinderror {
+		color: #f00;
+	}
 }
 
 

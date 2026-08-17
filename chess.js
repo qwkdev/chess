@@ -157,6 +157,11 @@ function loadFEN(fen, includeState=true) {
 		moveLists.forEach(e => {
 			if (e) e.innerHTML = '';
 		});
+		if (cfg().blind) {
+			blindLastMove.innerText = '';
+			blindInput.value = '';
+			blindError.innerText = '';
+		}
 	}
 }
 function getFEN(includeState=true, board=gameBoard) {
@@ -545,6 +550,8 @@ function checkInsufficient(end=true, board=gameBoard) {
 	return false;
 }
 
+const blindLastMove = document.getElementById('blindmove');
+
 let moveLists = [
 	document.getElementById('mobile-moves'),
 	document.getElementById('desktop-moves')
@@ -607,6 +614,10 @@ function logMove(from, to, algebraic=null, promoteTo=null, propegate=true) {
 			top: moveLists[1].scrollHeight,
 			behavior: 'smooth'
 		});
+	}
+
+	if (cfg().blind) {
+		blindLastMove.innerText = algebraic.join('');
 	}
 
 	syncTempState(buttonsOnly);
@@ -1215,6 +1226,30 @@ async function getMoveAlgebraic(algebraic, color, board=gameBoard) {
 		};
 	}
 }
+
+async function makeMoveAlgebraic(algebraic, color) {
+	const move = await getMoveAlgebraic(algebraic, color);
+	if (move.success) {
+		await makeMove(move.from, move.to, false, false, move.promote || null);
+		return { success: true };
+	} else {
+		return move;
+	}
+}
+
+const blindInput = document.getElementById('blindinput');
+const blindError = document.getElementById('blinderror');
+async function blindMove() {
+	const resp = await makeMoveAlgebraic(blindInput.value, state.turn);
+	if (resp.success) {
+		blindInput.value = '';
+		blindError.innerText = '';
+	} else {
+		blindError.innerText = `Error: ${resp.error}`;
+	}
+}
+
+blindInput.addEventListener('oninput', () => blindError.innerText = '');
 
 //
 
