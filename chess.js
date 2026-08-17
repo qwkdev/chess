@@ -377,7 +377,7 @@ let audios = {};
 
 async function loadAudios() {
 	for (const name of audioArray) {
-		const resp = await fetch(`audio/${name}.webm`);
+		const resp = await fetch(`/audio/${name}.webm`);
 		audios[name] = await audioContext.decodeAudioData(await resp.arrayBuffer());
 	}
 }
@@ -1270,7 +1270,7 @@ let engine;
 let engineReady = false;
 let engineQueue = [];
 function loadStockfish() {
-	engine = new Worker('engine/stockfish-18-lite.js');
+	engine = new Worker('/engine/stockfish-18-lite.js');
 	
 	engine.onmessage = e => {
 		if (e.data === 'readyok') {
